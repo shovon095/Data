@@ -237,31 +237,52 @@ def read_examples_from_file(data_dir, mode: Union[Split, str]) -> List[InputExam
     file_path = os.path.join(data_dir, f"{mode}.txt")
     guid_index = 1
     examples = []
+    words = []
+    labels = []
+    
     with open(file_path, encoding="utf-8") as f:
-        words = []
-        labels = []
         for line in f:
-            if line.startswith("-DOCSTART-") or line == "" or line == "\n":
+            line_strip = line.strip()
+            
+            # Flush current example if the line is blank.
+            if line_strip == "":
                 if words:
                     examples.append(InputExample(guid=f"{mode}-{guid_index}", words=words, labels=labels))
                     guid_index += 1
                     words = []
                     labels = []
+                continue
+            
+            # If the line starts with "RecordID", treat it as a new record.
+            if line_strip.startswith("RecordID"):
+                # If there's an example in progress, flush it.
+                if words:
+                    examples.append(InputExample(guid=f"{mode}-{guid_index}", words=words, labels=labels))
+                    guid_index += 1
+                    words = []
+                    labels = []
+                # Process the RecordID line.
+                splits = line_strip.split("\t")
+                words.append(splits[0])
+                # If a label exists on the record header line, add it; otherwise default to 'O'
+                labels.append(splits[1] if len(splits) > 1 and splits[1] else "O")
             else:
-                splits = line.split(" ")
+                # Process normal token lines (assuming TSV format).
+                splits = line_strip.split("\t")
                 words.append(splits[0])
                 if len(splits) > 1:
-                    splits_replace = splits[-1].replace("\n", "")
-                    if splits_replace == 'O':
-                        labels.append(splits_replace)
-                    else:
-                        labels.append(splits_replace + "-bio")
+                    lab = splits[1]
+                    # Append "-bio" if the label is not "O"
+                    labels.append(lab if lab == "O" else lab + "-bio")
                 else:
-                    # Examples could have no label for mode = "test"
                     labels.append("O")
+        
+        # Flush any remaining tokens as the last example.
         if words:
             examples.append(InputExample(guid=f"{mode}-{guid_index}", words=words, labels=labels))
+    
     return examples
+
 
 
 def convert_examples_to_features(
