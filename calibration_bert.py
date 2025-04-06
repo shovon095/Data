@@ -228,7 +228,9 @@ def main():
     if training_args.do_train:
         trainer.train(
             model_path=(
-                model_args.model_name_or_path if os.path.isdir(model_args.model_name_or_path) else None
+                model_args.model_name_or_path
+                if os.path.isdir(model_args.model_name_or_path)
+                else None
             )
         )
         # Save final model + tokenizer
@@ -242,7 +244,6 @@ def main():
     if training_args.do_eval and eval_dataset is not None:
         logger.info("*** Evaluate ***")
         result = trainer.evaluate()
-        # Save and log results
         output_eval_file = os.path.join(training_args.output_dir, "eval_results.txt")
         if trainer.is_world_process_zero():
             with open(output_eval_file, "w") as writer:
@@ -254,7 +255,7 @@ def main():
                         result["eval_precision"], result["eval_recall"], result["eval_f1"])
 
     # ----------------------------------------------------
-    # Prediction
+    # Prediction (Token-by-Token Output)
     # ----------------------------------------------------
     if training_args.do_predict and test_dataset is not None:
         logger.info("*** Test ***")
@@ -270,36 +271,34 @@ def main():
                 for key, value in metrics.items():
                     writer.write(f"{key} = {value}\n")
 
-            # Align predictions to tokens using our function
+            # Align predictions token by token.
             preds_list, _ = align_predictions(predictions, label_ids, label_map)
             output_test_predictions_file = os.path.join(training_args.output_dir, "test_predictions.txt")
             test_file_path = os.path.join(data_args.data_dir, "test.txt")
-            with open(output_test_predictions_file, "w", encoding="utf-8") as writer:
-                example_id = 0
-                # Read the original test file line by line
-                with open(test_file_path, "r", encoding="utf-8") as f:
-                    for line in f:
-                        # Preserve any blank lines or lines starting with DOCSTART
-                        if line.strip() == "" or line.startswith("-DOCSTART-"):
-                            writer.write(line)
-                            example_id += 1
+            
+            with open(test_file_path, "r", encoding="utf-8") as test_file, \
+                 open(output_test_predictions_file, "w", encoding="utf-8") as writer:
+                example_id = 0  # Index of the current sentence in preds_list.
+                for line in test_file:
+                    # Preserve blank lines and DOCSTART lines.
+                    if line.startswith("-DOCSTART-") or line.strip() == "":
+                        writer.write(line)
+                        # Assume that a blank line or DOCSTART signals a sentence boundary.
+                        example_id += 1
+                    else:
+                        token = line.strip().split()[0]
+                        if example_id < len(preds_list) and preds_list[example_id]:
+                            pred_tag = preds_list[example_id].pop(0)
                         else:
-                            # Get the token from the line (assuming token is the first column)
-                            token = line.strip().split()[0]
-                            # Retrieve the corresponding predicted tag.
-                            if example_id < len(preds_list) and preds_list[example_id]:
-                                pred_tag = preds_list[example_id].pop(0)
-                            else:
-                                logger.warning("No prediction for token '%s' in example %d. Defaulting to 'O'.", token, example_id)
-                                pred_tag = "O"
-                            writer.write(f"{token}\t{pred_tag}\n")
-
-    # End main()
+                            logger.warning("No prediction for token '%s' in example %d. Defaulting to 'O'.", token, example_id)
+                            pred_tag = "O"
+                        writer.write(f"{token}\t{pred_tag}\n")
 
 def _mp_fn(index):
     main()
 
 if __name__ == "__main__":
     main()
+
 
 
