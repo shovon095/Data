@@ -24,7 +24,9 @@ logger = logging.getLogger(__name__)
 
 @dataclass
 class ModelArguments:
-    model_name_or_path: str = field(metadata={"help": "Path to pretrained model or model identifier from huggingface.co/models"})
+    model_name_or_path: str = field(
+        metadata={"help": "Path to pretrained model or model identifier from huggingface.co/models"}
+    )
     config_name: Optional[str] = field(default=None)
     tokenizer_name: Optional[str] = field(default=None)
     use_fast: bool = field(default=False)
@@ -32,12 +34,16 @@ class ModelArguments:
 
 @dataclass
 class DataTrainingArguments:
-    data_dir: str = field(metadata={"help": "Input data dir with .txt files for a CoNLL-2003-formatted task."})
+    data_dir: str = field(metadata={"help": "Input data dir with .tsv files for NER"})
     labels: Optional[str] = field(default=None)
     max_seq_length: int = field(default=128)
     overwrite_cache: bool = field(default=False)
 
-def align_predictions(predictions: np.ndarray, label_ids: np.ndarray, label_map: Dict[int, str]) -> Tuple[List[List[str]], List[List[str]]]:
+def align_predictions(
+    predictions: np.ndarray,
+    label_ids: np.ndarray,
+    label_map: Dict[int, str]
+) -> Tuple[List[List[str]], List[List[str]]]:
     preds = np.argmax(predictions, axis=2)
     batch_size, seq_len = preds.shape
     out_label_list = [[] for _ in range(batch_size)]
@@ -107,11 +113,14 @@ def main():
 
     train_dataset = eval_dataset = test_dataset = None
     if training_args.do_train:
-        train_dataset = NerDataset(data_args.data_dir, tokenizer, labels, config.model_type, data_args.max_seq_length, data_args.overwrite_cache, Split.train)
+        train_dataset = NerDataset(data_args.data_dir, tokenizer, labels, config.model_type,
+                                   data_args.max_seq_length, data_args.overwrite_cache, Split.train)
     if training_args.do_eval:
-        eval_dataset = NerDataset(data_args.data_dir, tokenizer, labels, config.model_type, data_args.max_seq_length, data_args.overwrite_cache, Split.dev)
+        eval_dataset = NerDataset(data_args.data_dir, tokenizer, labels, config.model_type,
+                                  data_args.max_seq_length, data_args.overwrite_cache, Split.dev)
     if training_args.do_predict:
-        test_dataset = NerDataset(data_args.data_dir, tokenizer, labels, config.model_type, data_args.max_seq_length, data_args.overwrite_cache, Split.test)
+        test_dataset = NerDataset(data_args.data_dir, tokenizer, labels, config.model_type,
+                                  data_args.max_seq_length, data_args.overwrite_cache, Split.test)
 
     trainer = Trainer(
         model=model,
@@ -146,24 +155,26 @@ def main():
                     writer.write(f"{key} = {value}\n")
 
             preds_list, _ = align_predictions(predictions, label_ids, label_map)
-            test_file_path = os.path.join(data_args.data_dir, "test.txt")
-            output_test_predictions_file = os.path.join(training_args.output_dir, "test_predictions.txt")
-            flat_preds = [p for pred in preds_list for p in pred]
+            test_file_path = os.path.join(data_args.data_dir, "test.tsv")
+            output_predictions_file = os.path.join(training_args.output_dir, "test_predictions.tsv")
 
-            with open(test_file_path, "r", encoding="utf-8") as test_file, \
-                 open(output_test_predictions_file, "w", encoding="utf-8") as writer:
+            with open(test_file_path, "r", encoding="utf-8") as f, open(output_predictions_file, "w", encoding="utf-8") as writer:
+                example_id = 0
+                token_id = 0
 
-                pred_idx = 0
-                for line in test_file:
-                    if line.strip() == "" or line.startswith("-DOCSTART-"):
-                        writer.write(line)
+                for line in f:
+                    striped = line.strip()
+                    if striped == "":
+                        writer.write("\n")
+                        example_id += 1
+                        token_id = 0
                     else:
-                        token = line.strip().split()[0]
-                        if pred_idx < len(flat_preds):
-                            pred_tag = flat_preds[pred_idx]
-                            pred_idx += 1
+                        splits = striped.split("\t")
+                        token = splits[0]
+                        if example_id < len(preds_list) and token_id < len(preds_list[example_id]):
+                            pred_tag = preds_list[example_id][token_id]
+                            token_id += 1
                         else:
-                            logger.warning("No prediction for token '%s'. Defaulting to 'O'.", token)
                             pred_tag = "O"
                         writer.write(f"{token}\t{pred_tag}\n")
 
@@ -172,4 +183,5 @@ def _mp_fn(index):
 
 if __name__ == "__main__":
     main()
+
 
