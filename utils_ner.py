@@ -22,7 +22,6 @@ from enum import Enum
 from typing import List, Optional, Union
 
 from filelock import FileLock
-
 from transformers import PreTrainedTokenizer, is_tf_available, is_torch_available
 
 logger = logging.getLogger(__name__)
@@ -41,7 +40,7 @@ class InputFeatures:
     label_ids: Optional[List[int]] = None
 
 class Split(Enum):
-    train = "train_dev"
+    train = "train"
     dev = "devel"
     test = "test"
 
@@ -163,7 +162,7 @@ if is_tf_available():
 def read_examples_from_file(data_dir, mode: Union[Split, str]) -> List[InputExample]:
     if isinstance(mode, Split):
         mode = mode.value
-    file_path = os.path.join(data_dir, f"{mode}.txt")
+    file_path = os.path.join(data_dir, f"{mode}.tsv")
     guid_index = 1
     examples = []
     words = []
