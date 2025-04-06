@@ -34,6 +34,7 @@ class InputFeatures:
     token_type_ids: Optional[List[int]] = None
     label_ids: Optional[List[int]] = None
     word_ids: Optional[List[Optional[int]]] = None
+    words: Optional[List[str]] = None  # Store original words
 
 class Split(Enum):
     train = "train"
@@ -108,7 +109,12 @@ def convert_examples_to_features(
             prev_word_idx = word_idx
 
         features.append(InputFeatures(
-            input_ids, attention_mask, token_type_ids, label_ids, word_ids
+            input_ids=input_ids,
+            attention_mask=attention_mask,
+            token_type_ids=token_type_ids,
+            label_ids=label_ids,
+            word_ids=word_ids,
+            words=example.words,  # Store original words
         ))
 
     return features
@@ -145,7 +151,8 @@ class NerDataset(Dataset):
             "input_ids": torch.tensor(feat.input_ids, dtype=torch.long),
             "attention_mask": torch.tensor(feat.attention_mask, dtype=torch.long),
             "labels": torch.tensor(feat.label_ids, dtype=torch.long),
-            "word_ids": feat.word_ids
+            "word_ids": feat.word_ids,
+            "words": feat.words,  # Return original words for inference
         }
         if feat.token_type_ids is not None:
             item["token_type_ids"] = torch.tensor(feat.token_type_ids, dtype=torch.long)
