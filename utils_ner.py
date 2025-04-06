@@ -1,13 +1,10 @@
 # coding=utf-8
 # Copyright 2018 The Google AI Language Team Authors and The HuggingFace Inc. team.
 # Copyright (c) 2018, NVIDIA CORPORATION.  All rights reserved.
-#
 # Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
+# You may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
-#
 #     http://www.apache.org/licenses/LICENSE-2.0
-#
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -171,7 +168,7 @@ def read_examples_from_file(data_dir, mode: Union[Split, str]) -> List[InputExam
     with open(file_path, encoding="utf-8") as f:
         for line in f:
             line_strip = line.strip()
-            if line_strip == "":
+            if line_strip == ".":  # updated to match the full stop separator logic
                 if words:
                     examples.append(InputExample(guid=f"{mode}-{guid_index}", words=words, labels=labels))
                     guid_index += 1
@@ -189,6 +186,7 @@ def read_examples_from_file(data_dir, mode: Union[Split, str]) -> List[InputExam
         if words:
             examples.append(InputExample(guid=f"{mode}-{guid_index}", words=words, labels=labels))
 
+    logger.info(f"Loaded {len(examples)} examples from {file_path}")
     return examples
 
 def convert_examples_to_features(
@@ -211,14 +209,14 @@ def convert_examples_to_features(
     label_map = {label: i for i, label in enumerate(label_list)}
     features = []
     for ex_index, example in enumerate(examples):
-        if ex_index % 10000 == 0:
+        if ex_index < 5:
             logger.info("Writing example %d of %d", ex_index, len(examples))
 
         tokens = []
         label_ids = []
         for word, label in zip(example.words, example.labels):
             word_tokens = tokenizer.tokenize(word)
-            if len(word_tokens) > 0:
+            if word_tokens:
                 tokens.extend(word_tokens)
                 label_ids.extend([label_map[label]] + [pad_token_label_id] * (len(word_tokens) - 1))
 
