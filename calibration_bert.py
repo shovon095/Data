@@ -18,11 +18,7 @@ import logging
 import os
 import sys
 
-# -----------------------------
-# Assuming your utilities exist:
-#   get_labels, NerDataset, Split
-# -----------------------------
-from utils_ner import get_labels, NerDataset, Split
+from utils_ner import get_labels, NerDataset, Split, read_examples_from_file
 
 logger = logging.getLogger(__name__)
 
@@ -31,52 +27,25 @@ class ModelArguments:
     model_name_or_path: str = field(
         metadata={"help": "Path to pretrained model or model identifier from huggingface.co/models"}
     )
-    config_name: Optional[str] = field(
-        default=None, metadata={"help": "Pretrained config name or path if not the same as model_name"}
-    )
-    tokenizer_name: Optional[str] = field(
-        default=None, metadata={"help": "Pretrained tokenizer name or path if not the same as model_name"}
-    )
-    use_fast: bool = field(default=False, metadata={"help": "Set this flag to use fast tokenization."})
-    cache_dir: Optional[str] = field(
-        default=None, metadata={"help": "Where do you want to store the pretrained models downloaded from s3"}
-    )
+    config_name: Optional[str] = field(default=None)
+    tokenizer_name: Optional[str] = field(default=None)
+    use_fast: bool = field(default=False)
+    cache_dir: Optional[str] = field(default=None)
 
 @dataclass
 class DataTrainingArguments:
-    data_dir: str = field(
-        metadata={"help": "The input data dir. Should contain the .txt files for a CoNLL-2003-formatted task."}
-    )
-    labels: Optional[str] = field(
-        default=None,
-        metadata={"help": "Path to a file containing all labels. If not specified, CoNLL-2003 labels are used."},
-    )
-    max_seq_length: int = field(
-        default=128,
-        metadata={
-            "help": "The maximum total input sequence length after tokenization. "
-                    "Sequences longer than this will be truncated, shorter ones padded."
-        },
-    )
-    overwrite_cache: bool = field(
-        default=False, metadata={"help": "Overwrite the cached training and evaluation sets"}
-    )
+    data_dir: str = field(metadata={"help": "Input data dir with .txt files for a CoNLL-2003-formatted task."})
+    labels: Optional[str] = field(default=None)
+    max_seq_length: int = field(default=128)
+    overwrite_cache: bool = field(default=False)
 
-# ----------------------------
-# Align predictions to tokens
-# ----------------------------
 def align_predictions(
     predictions: np.ndarray,
     label_ids: np.ndarray,
     label_map: Dict[int, str]
 ) -> Tuple[List[List[str]], List[List[str]]]:
-    """
-    Convert argmax predictions and label IDs to string labels,
-    ignoring subword or special tokens with label_id == ignore_index.
-    """
-    preds = np.argmax(predictions, axis=2)  # shape: (batch_size, seq_len)
+    preds = np.argmax(predictions, axis=2)
     batch_size, seq_len = preds.shape
-
     out_label_list = [[] for _ in range(batch_size)]
     preds_list = [[] for _ in range(batch_size)]
 
@@ -88,35 +57,19 @@ def align_predictions(
 
     return preds_list, out_label_list
 
-# ----------------------------
-# Compute SeqEval metrics
-# ----------------------------
 def compute_metrics(p: EvalPrediction) -> Dict[str, float]:
-    # We'll use the global label_map from main()
-    preds_list, out_label_list = align_predictions(
-        p.predictions, p.label_ids, label_map
-    )
-    # Overall metrics
+    preds_list, out_label_list = align_predictions(p.predictions, p.label_ids, label_map)
     precision = precision_score(out_label_list, preds_list)
     recall = recall_score(out_label_list, preds_list)
     f1 = f1_score(out_label_list, preds_list)
 
-    # Per-label detailed report
-    per_label_report = classification_report(
-        out_label_list, preds_list, output_dict=True
-    )
+    per_label_report = classification_report(out_label_list, preds_list, output_dict=True)
     logger.info("\n***** Per-Label Report *****")
     for lbl, vals in per_label_report.items():
         if isinstance(vals, dict):
-            logger.info(
-                f"Label: {lbl} | Precision={vals['precision']:.4f}, Recall={vals['recall']:.4f}, F1={vals['f1-score']:.4f}"
-            )
+            logger.info(f"Label: {lbl} | Precision={vals['precision']:.4f}, Recall={vals['recall']:.4f}, F1={vals['f1-score']:.4f}")
 
-    return {
-        "precision": precision,
-        "recall": recall,
-        "f1": f1
-    }
+    return {"precision": precision, "recall": recall, "f1": f1}
 
 def main():
     parser = HfArgumentParser((ModelArguments, DataTrainingArguments, TrainingArguments))
@@ -124,17 +77,6 @@ def main():
         model_args, data_args, training_args = parser.parse_json_file(json_file=os.path.abspath(sys.argv[1]))
     else:
         model_args, data_args, training_args = parser.parse_args_into_dataclasses()
-
-    if (
-        os.path.exists(training_args.output_dir)
-        and os.listdir(training_args.output_dir)
-        and training_args.do_train
-        and not training_args.overwrite_output_dir
-    ):
-        raise ValueError(
-            f"Output directory ({training_args.output_dir}) already exists and is not empty. "
-            "Use --overwrite_output_dir to overcome."
-        )
 
     logging.basicConfig(
         format="%(asctime)s - %(levelname)s - %(name)s -   %(message)s",
@@ -145,26 +87,20 @@ def main():
 
     set_seed(training_args.seed)
 
-    # ----------------------------------------------------
-    # Load labels
-    # ----------------------------------------------------
     global label_map
     labels = get_labels(data_args.labels)
     label_map = {i: label for i, label in enumerate(labels)}
     num_labels = len(labels)
 
-    # ----------------------------------------------------
-    # Load config, tokenizer, model
-    # ----------------------------------------------------
     config = AutoConfig.from_pretrained(
-        model_args.config_name if model_args.config_name else model_args.model_name_or_path,
+        model_args.config_name or model_args.model_name_or_path,
         num_labels=num_labels,
         id2label=label_map,
         label2id={label: i for i, label in enumerate(labels)},
         cache_dir=model_args.cache_dir,
     )
     tokenizer = AutoTokenizer.from_pretrained(
-        model_args.tokenizer_name if model_args.tokenizer_name else model_args.model_name_or_path,
+        model_args.tokenizer_name or model_args.model_name_or_path,
         cache_dir=model_args.cache_dir,
         use_fast=model_args.use_fast,
     )
@@ -175,61 +111,17 @@ def main():
         cache_dir=model_args.cache_dir,
     )
 
-    # ----------------------------------------------------
-    # Load datasets
-    # ----------------------------------------------------
-    train_dataset, eval_dataset, test_dataset = None, None, None
-
+    train_dataset = eval_dataset = test_dataset = None
     if training_args.do_train:
-        train_dataset = NerDataset(
-            data_dir=data_args.data_dir,
-            tokenizer=tokenizer,
-            labels=labels,
-            model_type=config.model_type,
-            max_seq_length=data_args.max_seq_length,
-            overwrite_cache=data_args.overwrite_cache,
-            mode=Split.train,
-        )
+        train_dataset = NerDataset(data_args.data_dir, tokenizer, labels, config.model_type,
+                                   data_args.max_seq_length, data_args.overwrite_cache, Split.train)
     if training_args.do_eval:
-        eval_dataset = NerDataset(
-            data_dir=data_args.data_dir,
-            tokenizer=tokenizer,
-            labels=labels,
-            model_type=config.model_type,
-            max_seq_length=data_args.max_seq_length,
-            overwrite_cache=data_args.overwrite_cache,
-            mode=Split.dev,
-        )
+        eval_dataset = NerDataset(data_args.data_dir, tokenizer, labels, config.model_type,
+                                  data_args.max_seq_length, data_args.overwrite_cache, Split.dev)
     if training_args.do_predict:
-        test_dataset = NerDataset(
-            data_dir=data_args.data_dir,
-            tokenizer=tokenizer,
-            labels=labels,
-            model_type=config.model_type,
-            max_seq_length=data_args.max_seq_length,
-            overwrite_cache=data_args.overwrite_cache,
-            mode=Split.test,
-        )
-    if training_args.do_predict:
-        from utils_ner import read_examples_from_file
-        test_examples = read_examples_from_file(data_args.data_dir, Split.test)
-        # Effective max tokens available for words is the max_seq_length minus the special tokens
-        effective_max = data_args.max_seq_length - tokenizer.num_special_tokens_to_add()
-        for ex in test_examples:
-            token_count = len(ex.words)
-            if token_count > effective_max:
-                # Assume the first token is the record id if it starts with "RecordID"
-                record_id = ex.words[0] if ex.words and ex.words[0].startswith("RecordID") else ex.guid
-                logger.warning(
-                    "Example with RecordID %s has %d tokens, which exceeds the effective max sequence length of %d.",
-                    record_id, token_count, effective_max
-                )
-                # Optionally, also print to stdout:
-                print(f"WARNING: Example with RecordID {record_id} has {token_count} tokens (limit: {effective_max}).")
+        test_dataset = NerDataset(data_args.data_dir, tokenizer, labels, config.model_type,
+                                  data_args.max_seq_length, data_args.overwrite_cache, Split.test)
 
-    # ----------------------------------------------------
-    # Initialize Trainer
-    # ----------------------------------------------------
     trainer = Trainer(
         model=model,
         args=training_args,
@@ -238,73 +130,54 @@ def main():
         compute_metrics=compute_metrics,
     )
 
-    # ----------------------------------------------------
-    # Training
-    # ----------------------------------------------------
     if training_args.do_train:
-        trainer.train(
-            model_path=(
-                model_args.model_name_or_path
-                if os.path.isdir(model_args.model_name_or_path)
-                else None
-            )
-        )
-        # Save final model + tokenizer
+        trainer.train(model_path=model_args.model_name_or_path if os.path.isdir(model_args.model_name_or_path) else None)
         if trainer.is_world_process_zero():
             model.save_pretrained(training_args.output_dir)
             tokenizer.save_pretrained(training_args.output_dir)
 
-    # ----------------------------------------------------
-    # Evaluation
-    # ----------------------------------------------------
     if training_args.do_eval and eval_dataset is not None:
         logger.info("*** Evaluate ***")
         result = trainer.evaluate()
         output_eval_file = os.path.join(training_args.output_dir, "eval_results.txt")
         if trainer.is_world_process_zero():
             with open(output_eval_file, "w") as writer:
-                logger.info("***** Eval results *****")
                 for key, value in result.items():
-                    logger.info("  %s = %s", key, value)
-                    writer.write("%s = %s\n" % (key, value))
-            logger.info("\nPrecision: %.4f, Recall: %.4f, F1: %.4f",
-                        result["eval_precision"], result["eval_recall"], result["eval_f1"])
+                    writer.write(f"{key} = {value}\n")
 
-    # ----------------------------------------------------
-    # Prediction (Token-by-Token Output)
-    # ----------------------------------------------------
     if training_args.do_predict and test_dataset is not None:
         logger.info("*** Test ***")
         predictions, label_ids, metrics = trainer.predict(test_dataset)
-        logger.info("***** Test results *****")
-        for key, value in metrics.items():
-            logger.info("  %s = %s", key, value)
-
-        # Save test metrics
         output_test_results_file = os.path.join(training_args.output_dir, "test_results.txt")
         if trainer.is_world_process_zero():
             with open(output_test_results_file, "w") as writer:
                 for key, value in metrics.items():
                     writer.write(f"{key} = {value}\n")
 
-            # Align predictions token by token.
             preds_list, _ = align_predictions(predictions, label_ids, label_map)
-            output_test_predictions_file = os.path.join(training_args.output_dir, "test_predictions.txt")
             test_file_path = os.path.join(data_args.data_dir, "test.txt")
-            
+            test_examples = read_examples_from_file(data_args.data_dir, Split.test)
+            output_test_predictions_file = os.path.join(training_args.output_dir, "test_predictions.txt")
+
             with open(test_file_path, "r", encoding="utf-8") as test_file, \
                  open(output_test_predictions_file, "w", encoding="utf-8") as writer:
-                example_id = 0  # Index of the current sentence in preds_list.
+
+                example_id = 0
+                token_id = 0
+
                 for line in test_file:
-                    # Preserve blank lines and DOCSTART lines.
-                    if line.startswith("-DOCSTART-") or line.strip() == "":
+                    stripped = line.strip()
+
+                    if stripped == "" or stripped.startswith("-DOCSTART-"):
                         writer.write(line)
-                        # Assume that a blank line or DOCSTART signals a sentence boundary.
-                        example_id += 1
+                        if stripped == "":
+                            example_id += 1
+                            token_id = 0
                     else:
-                        token = line.strip().split()[0]
-                        if example_id < len(preds_list) and preds_list[example_id]:
-                            pred_tag = preds_list[example_id].pop(0)
+                        token = stripped.split()[0]
+                        if example_id < len(preds_list) and token_id < len(preds_list[example_id]):
+                            pred_tag = preds_list[example_id][token_id]
+                            token_id += 1
                         else:
                             logger.warning("No prediction for token '%s' in example %d. Defaulting to 'O'.", token, example_id)
                             pred_tag = "O"
@@ -315,6 +188,3 @@ def _mp_fn(index):
 
 if __name__ == "__main__":
     main()
-
-
-
