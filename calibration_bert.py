@@ -210,6 +210,22 @@ def main():
             overwrite_cache=data_args.overwrite_cache,
             mode=Split.test,
         )
+    if training_args.do_predict:
+        from utils_ner import read_examples_from_file
+        test_examples = read_examples_from_file(data_args.data_dir, Split.test)
+        # Effective max tokens available for words is the max_seq_length minus the special tokens
+        effective_max = data_args.max_seq_length - tokenizer.num_special_tokens_to_add()
+        for ex in test_examples:
+            token_count = len(ex.words)
+            if token_count > effective_max:
+                # Assume the first token is the record id if it starts with "RecordID"
+                record_id = ex.words[0] if ex.words and ex.words[0].startswith("RecordID") else ex.guid
+                logger.warning(
+                    "Example with RecordID %s has %d tokens, which exceeds the effective max sequence length of %d.",
+                    record_id, token_count, effective_max
+                )
+                # Optionally, also print to stdout:
+                print(f"WARNING: Example with RecordID {record_id} has {token_count} tokens (limit: {effective_max}).")
 
     # ----------------------------------------------------
     # Initialize Trainer
