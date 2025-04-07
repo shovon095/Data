@@ -355,18 +355,6 @@ def main():
                         if example_id >= len(preds_list) or not preds_list[example_id]:
                             example_id += 1
 
-def get_labels(path: str) -> List[str]:
-    """Gets the list of labels for this task."""
-    if path:
-        with open(path, "r") as f:
-            labels = f.read().splitlines()
-        if "O" not in labels:
-            labels = ["O"] + labels
-        return labels
-    else:
-        # Return default labels
-        return ["O", "B-NoDisposition", "I-NoDisposition", "B-Disposition", "I-Disposition", "B-Undetermined", "I-Undetermined"]
-
 def _mp_fn(index):
     main()
 
