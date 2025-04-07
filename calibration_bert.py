@@ -2,7 +2,6 @@ from typing import Tuple, Dict, List, Optional
 import numpy as np
 import torch
 from torch import nn
-from torch.utils.data import Dataset
 from transformers import (
     AutoConfig,
     AutoModelForTokenClassification,
@@ -18,40 +17,8 @@ from dataclasses import dataclass, field
 import logging
 import os
 import sys
-from enum import Enum
 
 logger = logging.getLogger(__name__)
-
-# Minimal definitions for missing components
-def get_labels(labels_path: Optional[str] = None) -> List[str]:
-    # Replace with your actual label extraction logic.
-    # Here we use default CoNLL-2003 labels if no file is provided.
-    if labels_path and os.path.exists(labels_path):
-        with open(labels_path, "r") as f:
-            labels = [line.strip() for line in f if line.strip()]
-    else:
-        labels = ["O", "B-PER", "I-PER", "B-ORG", "I-ORG", "B-LOC", "I-LOC", "B-MISC", "I-MISC"]
-    return labels
-
-class Split(Enum):
-    train = "train"
-    dev = "dev"
-    test = "test"
-
-class NerDataset(Dataset):
-    def __init__(self, data_dir: str, tokenizer: AutoTokenizer, labels: List[str],
-                 model_type: str, max_seq_length: int, overwrite_cache: bool, mode: Split):
-        # Replace with your actual dataset processing logic.
-        # This is a placeholder example that returns an empty dataset.
-        self.examples = []
-        self.tokenizer = tokenizer
-        self.max_seq_length = max_seq_length
-
-    def __len__(self):
-        return len(self.examples)
-
-    def __getitem__(self, index):
-        return self.examples[index]
 
 @dataclass
 class ModelArguments:
@@ -81,7 +48,8 @@ class DataTrainingArguments:
     max_seq_length: int = field(
         default=128,
         metadata={
-            "help": "The maximum total input sequence length after tokenization. Sequences longer than this will be truncated, sequences shorter will be padded."
+            "help": "The maximum total input sequence length after tokenization. Sequences longer "
+            "than this will be truncated, sequences shorter will be padded."
         },
     )
     overwrite_cache: bool = field(
@@ -122,19 +90,16 @@ def get_metrics(predictions: np.ndarray, label_ids: np.ndarray) -> Dict[str, flo
 
     return {'ece': ECE, 'mce': MCE}
 
-def align_predictions(predictions: np.ndarray, label_ids: np.ndarray, label_map: Dict[int, str]) -> Tuple[List[List[str]], List[List[str]]]:
+def align_predictions(predictions: np.ndarray, label_ids: np.ndarray, label_map: Dict[int, str]) -> Tuple[List[int], List[int]]:
     preds = np.argmax(predictions, axis=2)
     batch_size, seq_len = preds.shape
 
     out_label_list = [[] for _ in range(batch_size)]
     preds_list = [[] for _ in range(batch_size)]
 
-    # Use the ignore_index from the loss (default value is -100 in transformers)
-    ignore_index = nn.CrossEntropyLoss().ignore_index
-
     for i in range(batch_size):
         for j in range(seq_len):
-            if label_ids[i, j] != ignore_index:
+            if label_ids[i, j] != nn.CrossEntropyLoss().ignore_index:
                 out_label_list[i].append(label_map[label_ids[i][j]])
                 preds_list[i].append(label_map[preds[i][j]])
 
@@ -250,11 +215,11 @@ def main():
                 for key, value in result.items():
                     logger.info("  %s = %s", key, value)
                     writer.write("%s = %s\n" % (key, value))
-            # Print calibration errors
-            ece = result.get("ece", None)
-            mce = result.get("mce", None)
-            if ece is not None and mce is not None:
-                print(f"Calibration Errors - ECE: {ece}, MCE: {mce}")
+        # Print calibration errors
+        ece = result.get("ece", None)
+        mce = result.get("mce", None)
+        if ece is not None and mce is not None:
+            print(f"Calibration Errors - ECE: {ece}, MCE: {mce}")
 
     if training_args.do_predict:
         test_dataset = NerDataset(
@@ -289,23 +254,28 @@ def main():
                 with open(os.path.join(data_args.data_dir, "test.txt"), "r") as f:
                     example_id = 0
                     for line in f:
-                        if line.startswith("-DOCSTART-") or line.strip() == "":
+                        if line.startswith("-DOCSTART-") or line == "" or line == "\n":
                             writer.write(line)
-                            if example_id < len(preds_list) and not preds_list[example_id]:
+                            if not preds_list[example_id]:
                                 example_id += 1
-                        elif example_id < len(preds_list) and preds_list[example_id]:
+                        elif preds_list[example_id]:
                             entity_label = preds_list[example_id].pop(0)
-                            # Write first letter for non-O labels as per original logic
-                            output_line = f"{line.split()[0]} {'O' if entity_label == 'O' else entity_label[0]}\n"
+                            if entity_label == 'O':
+                                output_line = line.split()[0] + " " + entity_label + "\n"
+                            else:
+                                output_line = line.split()[0] + " " + entity_label[0] + "\n"
                             writer.write(output_line)
                         else:
-                            logger.warning("Maximum sequence length exceeded: No prediction for '%s'.", line.split()[0])
+                            logger.warning(
+                                "Maximum sequence length exceeded: No prediction for '%s'.", line.split()[0]
+                            )
 
 def _mp_fn(index):
     main()
 
 if __name__ == "__main__":
     main()
+
 
 
 
