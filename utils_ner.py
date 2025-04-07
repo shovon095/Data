@@ -13,23 +13,18 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-""" Named entity recognition fine-tuning: utilities to work with CoNLL-2003 task. """
-
+""" Named entity recognition fine-tuning: utilities to work with NER tasks. """
 
 import logging
 import os
-import pdb
 from dataclasses import dataclass
 from enum import Enum
 from typing import List, Optional, Union
 
 from filelock import FileLock
-
 from transformers import PreTrainedTokenizer, is_tf_available, is_torch_available
 
-
 logger = logging.getLogger(__name__)
-
 
 @dataclass
 class InputExample:
@@ -62,8 +57,8 @@ class InputFeatures:
 
 
 class Split(Enum):
-    train = "train_dev"
-    dev = "devel"
+    train = "train"
+    dev = "dev"
     test = "test"
 
 
@@ -74,8 +69,7 @@ if is_torch_available():
 
     class NerDataset(Dataset):
         """
-        This will be superseded by a framework-agnostic approach
-        soon.
+        PyTorch dataset for NER tasks
         """
 
         features: List[InputFeatures]
@@ -102,7 +96,6 @@ if is_torch_available():
             # and the others will use the cache.
             lock_path = cached_features_file + ".lock"
             with FileLock(lock_path):
-
                 if os.path.exists(cached_features_file) and not overwrite_cache:
                     logger.info(f"Loading features from cached file {cached_features_file}")
                     self.features = torch.load(cached_features_file)
@@ -121,7 +114,7 @@ if is_torch_available():
                         cls_token_segment_id=2 if model_type in ["xlnet"] else 0,
                         sep_token=tokenizer.sep_token,
                         sep_token_extra=False,
-                        # roberta uses an extra separator b/w pairs of sentences, cf. github.com/pytorch/fairseq/commit/1684e166e3da03f5b600dbb7855cb98ddfcd0805
+                        # roberta uses an extra separator b/w pairs of sentences
                         pad_on_left=bool(tokenizer.padding_side == "left"),
                         pad_token=tokenizer.pad_token_id,
                         pad_token_segment_id=tokenizer.pad_token_type_id,
@@ -142,12 +135,11 @@ if is_tf_available():
 
     class TFNerDataset:
         """
-        This will be superseded by a framework-agnostic approach
-        soon.
+        TensorFlow dataset for NER tasks
         """
 
         features: List[InputFeatures]
-        pad_token_label_id: int = -1
+        pad_token_label_id: int = -100
         # Use cross entropy ignore_index as padding label id so that only
         # real label ids contribute to the loss later.
 
@@ -174,7 +166,7 @@ if is_tf_available():
                 cls_token_segment_id=2 if model_type in ["xlnet"] else 0,
                 sep_token=tokenizer.sep_token,
                 sep_token_extra=False,
-                # roberta uses an extra separator b/w pairs of sentences, cf. github.com/pytorch/fairseq/commit/1684e166e3da03f5b600dbb7855cb98ddfcd0805
+                # roberta uses an extra separator b/w pairs of sentences
                 pad_on_left=bool(tokenizer.padding_side == "left"),
                 pad_token=tokenizer.pad_token_id,
                 pad_token_segment_id=tokenizer.pad_token_type_id,
@@ -234,33 +226,45 @@ if is_tf_available():
 def read_examples_from_file(data_dir, mode: Union[Split, str]) -> List[InputExample]:
     if isinstance(mode, Split):
         mode = mode.value
-    file_path = os.path.join(data_dir, f"{mode}.txt")
+    file_path = os.path.join(data_dir, f"{mode}.tsv")
     guid_index = 1
     examples = []
-    with open(file_path, encoding="utf-8") as f:
-        words = []
-        labels = []
-        for line in f:
-            if line.startswith("-DOCSTART-") or line == "" or line == "\n":
-                if words:
-                    examples.append(InputExample(guid=f"{mode}-{guid_index}", words=words, labels=labels))
-                    guid_index += 1
-                    words = []
-                    labels = []
-            else:
-                splits = line.split(" ")
-                words.append(splits[0])
-                if len(splits) > 1:
-                    splits_replace = splits[-1].replace("\n", "")
-                    if splits_replace == 'O':
-                        labels.append(splits_replace)
-                    else:
-                        labels.append(splits_replace + "-bio")
+    words = []
+    labels = []
+    
+    try:
+        with open(file_path, encoding="utf-8") as f:
+            for line in f:
+                line = line.strip()
+                if not line:
+                    if words:
+                        examples.append(InputExample(guid=f"{mode}-{guid_index}", words=words, labels=labels))
+                        guid_index += 1
+                        words = []
+                        labels = []
                 else:
-                    # Examples could have no label for mode = "test"
-                    labels.append("O")
+                    try:
+                        splits = line.split("\t")
+                        if len(splits) > 1:
+                            words.append(splits[0])
+                            label = splits[-1].strip()
+                            # Use the label as-is, no need to add suffix
+                            labels.append(label)
+                        else:
+                            # If there's only one column, assume it's a word with "O" label
+                            words.append(splits[0])
+                            labels.append("O")
+                    except Exception as e:
+                        logger.warning(f"Error parsing line: {line}. Error: {e}")
+                        continue
+        
+        # Add the last example if there are remaining words
         if words:
             examples.append(InputExample(guid=f"{mode}-{guid_index}", words=words, labels=labels))
+    except Exception as e:
+        logger.error(f"Error reading file {file_path}: {e}")
+        raise
+        
     return examples
 
 
@@ -281,30 +285,32 @@ def convert_examples_to_features(
     sequence_a_segment_id=0,
     mask_padding_with_zero=True,
 ) -> List[InputFeatures]:
-    """ Loads a data file into a list of `InputFeatures`
-        `cls_token_at_end` define the location of the CLS token:
-            - False (Default, BERT/XLM pattern): [CLS] + A + [SEP] + B + [SEP]
-            - True (XLNet/GPT pattern): A + [SEP] + B + [SEP] + [CLS]
-        `cls_token_segment_id` define the segment id associated to the CLS token (0 for BERT, 2 for XLNet)
-    """
-    # TODO clean up all this to leverage built-in features of tokenizers
-
+    """ Loads a data file into a list of `InputFeatures` """
     label_map = {label: i for i, label in enumerate(label_list)}
     features = []
+
     for (ex_index, example) in enumerate(examples):
         if ex_index % 10_000 == 0:
             logger.info("Writing example %d of %d", ex_index, len(examples))
 
         tokens = []
         label_ids = []
+        
         for word, label in zip(example.words, example.labels):
             word_tokens = tokenizer.tokenize(word)
             
-            # bert-base-multilingual-cased sometimes output "nothing ([]) when calling tokenize with just a space.
-            if len(word_tokens) > 0:
-                tokens.extend(word_tokens)
-                # Use the real label id for the first token of the word, and padding ids for the remaining tokens
+            # Handle empty tokens
+            if len(word_tokens) == 0:
+                word_tokens = [tokenizer.unk_token]
+                
+            tokens.extend(word_tokens)
+            
+            # Use the real label id for the first token of the word, and padding ids for the remaining tokens
+            if label in label_map:
                 label_ids.extend([label_map[label]] + [pad_token_label_id] * (len(word_tokens) - 1))
+            else:
+                logger.warning(f"Label '{label}' not found in label map. Using 'O' instead.")
+                label_ids.extend([label_map["O"]] + [pad_token_label_id] * (len(word_tokens) - 1))
 
         # Account for [CLS] and [SEP] with "- 2" and with "- 3" for RoBERTa.
         special_tokens_count = tokenizer.num_special_tokens_to_add()
@@ -312,24 +318,7 @@ def convert_examples_to_features(
             tokens = tokens[: (max_seq_length - special_tokens_count)]
             label_ids = label_ids[: (max_seq_length - special_tokens_count)]
 
-        # The convention in BERT is:
-        # (a) For sequence pairs:
-        #  tokens:   [CLS] is this jack ##son ##ville ? [SEP] no it is not . [SEP]
-        #  type_ids:   0   0  0    0    0     0       0   0   1  1  1  1   1   1
-        # (b) For single sequences:
-        #  tokens:   [CLS] the dog is hairy . [SEP]
-        #  type_ids:   0   0   0   0  0     0   0
-        #
-        # Where "type_ids" are used to indicate whether this is the first
-        # sequence or the second sequence. The embedding vectors for `type=0` and
-        # `type=1` were learned during pre-training and are added to the wordpiece
-        # embedding vector (and position vector). This is not *strictly* necessary
-        # since the [SEP] token unambiguously separates the sequences, but it makes
-        # it easier for the model to learn the concept of sequences.
-        #
-        # For classification tasks, the first vector (corresponding to [CLS]) is
-        # used as as the "sentence vector". Note that this only makes sense because
-        # the entire model is fine-tuned.
+        # Add [SEP] token
         tokens += [sep_token]
         label_ids += [pad_token_label_id]
         if sep_token_extra:
@@ -338,6 +327,7 @@ def convert_examples_to_features(
             label_ids += [pad_token_label_id]
         segment_ids = [sequence_a_segment_id] * len(tokens)
 
+        # Add [CLS] token
         if cls_token_at_end:
             tokens += [cls_token]
             label_ids += [pad_token_label_id]
@@ -349,8 +339,7 @@ def convert_examples_to_features(
 
         input_ids = tokenizer.convert_tokens_to_ids(tokens)
 
-        # The mask has 1 for real tokens and 0 for padding tokens. Only real
-        # tokens are attended to.
+        # The mask has 1 for real tokens and 0 for padding tokens. Only real tokens are attended to.
         input_mask = [1 if mask_padding_with_zero else 0] * len(input_ids)
 
         # Zero-pad up to the sequence length.
@@ -385,20 +374,24 @@ def convert_examples_to_features(
 
         features.append(
             InputFeatures(
-                input_ids=input_ids, attention_mask=input_mask, token_type_ids=segment_ids, label_ids=label_ids
+                input_ids=input_ids, 
+                attention_mask=input_mask, 
+                token_type_ids=segment_ids, 
+                label_ids=label_ids
             )
         )
     return features
 
 
 def get_labels(path: str) -> List[str]:
+    """Gets the list of labels from the label file or uses default labels."""
     if path:
-        with open(path, "r") as f:
-            labels = f.read().splitlines()
-            labels = [i+'-bio' if i != 'O' else 'O' for i in labels]
-        if "O" not in labels:
-            labels = ["O"] + labels
-        return labels
-    else:
-        # return ["O", "B-MISC", "I-MISC", "B-PER", "I-PER", "B-ORG", "I-ORG", "B-LOC", "I-LOC"]
-        return ["O", "B-bio", "I-bio"]
+        try:
+            with open(path, "r") as f:
+                labels = f.read().splitlines()
+            return labels
+        except Exception as e:
+            logger.error(f"Error reading labels file {path}: {e}")
+    
+    # Default labels if no file is provided
+    return ["O", "B-NoDisposition", "I-NoDisposition", "B-Disposition", "I-Disposition", "B-Undetermined", "I-Undetermined"]
