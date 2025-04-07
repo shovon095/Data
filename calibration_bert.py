@@ -17,6 +17,7 @@ from dataclasses import dataclass, field
 import logging
 import os
 import sys
+from utils_ner import NerDataset, get_labels, Split
 
 logger = logging.getLogger(__name__)
 
