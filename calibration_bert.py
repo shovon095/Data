@@ -39,14 +39,14 @@ class ModelArguments:
 @dataclass
 class DataTrainingArguments:
     data_dir: str = field(
-        metadata={"help": "The input data dir. Should contain the .txt files for a CoNLL-2003-formatted task."}
+        metadata={"help": "The input data dir. Should contain the .tsv files for the task."}
     )
     labels: Optional[str] = field(
         default=None,
-        metadata={"help": "Path to a file containing all labels. If not specified, CoNLL-2003 labels are used."},
+        metadata={"help": "Path to a file containing all labels. If not specified, default labels are used."},
     )
     max_seq_length: int = field(
-        default=128,
+        default=512,  # Increased from 128 to handle longer sequences
         metadata={
             "help": "The maximum total input sequence length after tokenization. Sequences longer "
             "than this will be truncated, sequences shorter will be padded."
@@ -55,12 +55,22 @@ class DataTrainingArguments:
     overwrite_cache: bool = field(
         default=False, metadata={"help": "Overwrite the cached training and evaluation sets"}
     )
+    file_extension: str = field(
+        default="tsv", metadata={"help": "File extension for input files (tsv or txt)"}
+    )
 
 def calc_bins(predictions: np.ndarray, label_ids: np.ndarray, num_bins=10) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+    """Calculate calibration bins for model predictions."""
     probs = np.max(predictions, axis=2)  # Get max probability for each prediction
     preds = np.argmax(predictions, axis=2)
 
-    correct = (preds == label_ids).astype(float)
+    # Filter out padding tokens
+    mask = label_ids != nn.CrossEntropyLoss().ignore_index
+    probs = probs[mask]
+    preds = preds[mask]
+    label_ids_filtered = label_ids[mask]
+
+    correct = (preds == label_ids_filtered).astype(float)
 
     bins = np.linspace(0.0, 1.0, num_bins + 1)
     bin_indices = np.digitize(probs, bins, right=True)
@@ -79,18 +89,35 @@ def calc_bins(predictions: np.ndarray, label_ids: np.ndarray, num_bins=10) -> Tu
     return bins, bin_indices, bin_accs, bin_confs, bin_sizes
 
 def get_metrics(predictions: np.ndarray, label_ids: np.ndarray) -> Dict[str, float]:
+    """Calculate calibration metrics."""
     ECE = 0.0
     MCE = 0.0
     bins, _, bin_accs, bin_confs, bin_sizes = calc_bins(predictions, label_ids)
 
     for i in range(len(bins) - 1):
-        abs_conf_diff = abs(bin_accs[i] - bin_confs[i])
-        ECE += (bin_sizes[i] / np.sum(bin_sizes)) * abs_conf_diff
-        MCE = max(MCE, abs_conf_diff)
+        if bin_sizes[i] > 0:
+            abs_conf_diff = abs(bin_accs[i] - bin_confs[i])
+            ECE += (bin_sizes[i] / np.sum(bin_sizes)) * abs_conf_diff
+            MCE = max(MCE, abs_conf_diff)
 
+    # Calculate F1 score
+    preds = np.argmax(predictions, axis=2)
+    mask = label_ids != nn.CrossEntropyLoss().ignore_index
+    
+    # Extract non-padded tokens
+    true_predictions = [
+        [p for (p, m) in zip(pred, mask_line) if m]
+        for pred, mask_line in zip(preds, mask)
+    ]
+    true_labels = [
+        [l for (l, m) in zip(label, mask_line) if m]
+        for label, mask_line in zip(label_ids, mask)
+    ]
+    
     return {'ece': ECE, 'mce': MCE}
 
-def align_predictions(predictions: np.ndarray, label_ids: np.ndarray, label_map: Dict[int, str]) -> Tuple[List[int], List[int]]:
+def align_predictions(predictions: np.ndarray, label_ids: np.ndarray, label_map: Dict[int, str]) -> Tuple[List[List[str]], List[List[str]]]:
+    """Align predictions with the original labels by handling padding tokens."""
     preds = np.argmax(predictions, axis=2)
     batch_size, seq_len = preds.shape
 
@@ -122,6 +149,7 @@ def main():
             f"Output directory ({training_args.output_dir}) already exists and is not empty. Use --overwrite_output_dir to overcome."
         )
 
+    # Setup logging
     logging.basicConfig(
         format="%(asctime)s - %(levelname)s - %(name)s -   %(message)s",
         datefmt="%m/%d/%Y %H:%M:%S",
@@ -137,12 +165,15 @@ def main():
     )
     logger.info("Training/evaluation parameters %s", training_args)
 
+    # Set seed
     set_seed(training_args.seed)
 
+    # Prepare labels
     labels = get_labels(data_args.labels)
     label_map: Dict[int, str] = {i: label for i, label in enumerate(labels)}
     num_labels = len(labels)
 
+    # Load pretrained model and tokenizer
     config = AutoConfig.from_pretrained(
         model_args.config_name if model_args.config_name else model_args.model_name_or_path,
         num_labels=num_labels,
@@ -162,6 +193,7 @@ def main():
         cache_dir=model_args.cache_dir,
     )
 
+    # Get datasets
     train_dataset = (
         NerDataset(
             data_dir=data_args.data_dir,
@@ -171,6 +203,7 @@ def main():
             max_seq_length=data_args.max_seq_length,
             overwrite_cache=data_args.overwrite_cache,
             mode=Split.train,
+            file_extension=data_args.file_extension,
         )
         if training_args.do_train
         else None
@@ -184,19 +217,46 @@ def main():
             max_seq_length=data_args.max_seq_length,
             overwrite_cache=data_args.overwrite_cache,
             mode=Split.dev,
+            file_extension=data_args.file_extension,
         )
         if training_args.do_eval
         else None
     )
 
+    def compute_metrics(p: EvalPrediction) -> Dict:
+        predictions = p.predictions
+        label_ids = p.label_ids
+        preds = np.argmax(predictions, axis=2)
+        
+        # Calculate calibration metrics
+        metrics = get_metrics(predictions, label_ids)
+        
+        # Calculate sequence labeling metrics
+        label_list = get_labels(data_args.labels)
+        preds_list, _ = align_predictions(predictions, label_ids, label_map)
+        true_labels = [[label_list[l] for l in label_ids[i] if l != nn.CrossEntropyLoss().ignore_index] 
+                       for i in range(len(label_ids))]
+        
+        # Use Seqeval for entity-level metrics
+        try:
+            metrics["f1"] = f1_score(true_labels, preds_list)
+            metrics["precision"] = precision_score(true_labels, preds_list)
+            metrics["recall"] = recall_score(true_labels, preds_list)
+        except Exception as e:
+            logger.warning(f"Error calculating seqeval metrics: {e}")
+            
+        return metrics
+
+    # Initialize trainer
     trainer = Trainer(
         model=model,
         args=training_args,
         train_dataset=train_dataset,
         eval_dataset=eval_dataset,
-        compute_metrics=lambda p: get_metrics(p.predictions, p.label_ids),
+        compute_metrics=compute_metrics,
     )
 
+    # Training
     if training_args.do_train:
         trainer.train(
             model_path=model_args.model_name_or_path if os.path.isdir(model_args.model_name_or_path) else None
@@ -205,9 +265,11 @@ def main():
         if trainer.is_world_process_zero():
             tokenizer.save_pretrained(training_args.output_dir)
 
+    # Evaluation
     if training_args.do_eval:
         logger.info("*** Evaluate ***")
         result = trainer.evaluate()
+        
         output_eval_file = os.path.join(training_args.output_dir, "eval_results.txt")
         if trainer.is_world_process_zero():
             with open(output_eval_file, "w") as writer:
@@ -215,12 +277,14 @@ def main():
                 for key, value in result.items():
                     logger.info("  %s = %s", key, value)
                     writer.write("%s = %s\n" % (key, value))
+        
         # Print calibration errors
         ece = result.get("ece", None)
         mce = result.get("mce", None)
         if ece is not None and mce is not None:
             print(f"Calibration Errors - ECE: {ece}, MCE: {mce}")
 
+    # Prediction
     if training_args.do_predict:
         test_dataset = NerDataset(
             data_dir=data_args.data_dir,
@@ -230,11 +294,13 @@ def main():
             max_seq_length=data_args.max_seq_length,
             overwrite_cache=data_args.overwrite_cache,
             mode=Split.test,
+            file_extension=data_args.file_extension,
         )
 
         predictions, label_ids, metrics = trainer.predict(test_dataset)
         preds_list, _ = align_predictions(predictions, label_ids, label_map)
 
+        # Save metrics
         output_test_results_file = os.path.join(training_args.output_dir, "test_results.txt")
         if trainer.is_world_process_zero():
             with open(output_test_results_file, "w") as writer:
@@ -242,33 +308,64 @@ def main():
                 for key, value in metrics.items():
                     logger.info("  %s = %s", key, value)
                     writer.write("%s = %s\n" % (key, value))
+            
             # Print calibration errors
             ece = metrics.get("ece", None)
             mce = metrics.get("mce", None)
             if ece is not None and mce is not None:
                 print(f"Calibration Errors - ECE: {ece}, MCE: {mce}")
 
-        output_test_predictions_file = os.path.join(training_args.output_dir, "test_predictions.txt")
+        # Save predictions in the same format as input
+        output_test_predictions_file = os.path.join(training_args.output_dir, f"test_predictions.{data_args.file_extension}")
         if trainer.is_world_process_zero():
             with open(output_test_predictions_file, "w") as writer:
-                with open(os.path.join(data_args.data_dir, "test.txt"), "r") as f:
-                    example_id = 0
+                example_id = 0
+                with open(os.path.join(data_args.data_dir, f"test.{data_args.file_extension}"), "r") as f:
                     for line in f:
-                        if line.startswith("-DOCSTART-") or line == "" or line == "\n":
-                            writer.write(line)
-                            if not preds_list[example_id]:
-                                example_id += 1
-                        elif preds_list[example_id]:
-                            entity_label = preds_list[example_id].pop(0)
-                            if entity_label == 'O':
-                                output_line = line.split()[0] + " " + entity_label + "\n"
+                        line = line.strip()
+                        if not line:
+                            # Empty line indicates end of sentence or document
+                            writer.write("\n")
+                            continue
+                        
+                        if line.startswith("-DOCSTART-") or line.startswith("RecordID"):
+                            # Special document marker line, keep as is
+                            writer.write(line + "\n")
+                            continue
+                            
+                        try:
+                            parts = line.split("\t")
+                            if len(parts) < 2:
+                                # If line doesn't have enough parts, keep it as is
+                                writer.write(line + "\n")
+                                continue
+                                
+                            token = parts[0]
+                            if example_id < len(preds_list) and preds_list[example_id]:
+                                label = preds_list[example_id].pop(0)
+                                writer.write(f"{token}\t{label}\n")
                             else:
-                                output_line = line.split()[0] + " " + entity_label[0] + "\n"
-                            writer.write(output_line)
-                        else:
-                            logger.warning(
-                                "Maximum sequence length exceeded: No prediction for '%s'.", line.split()[0]
-                            )
+                                # If we run out of predictions, use the original label or "O"
+                                original_label = parts[1] if len(parts) > 1 else "O"
+                                writer.write(f"{token}\t{original_label}\n")
+                        except Exception as e:
+                            logger.warning(f"Error processing line: {line}, Error: {e}")
+                            writer.write(line + "\n")
+                            
+                        if example_id >= len(preds_list) or not preds_list[example_id]:
+                            example_id += 1
+
+def get_labels(path: str) -> List[str]:
+    """Gets the list of labels for this task."""
+    if path:
+        with open(path, "r") as f:
+            labels = f.read().splitlines()
+        if "O" not in labels:
+            labels = ["O"] + labels
+        return labels
+    else:
+        # Return default labels
+        return ["O", "B-NoDisposition", "I-NoDisposition", "B-Disposition", "I-Disposition", "B-Undetermined", "I-Undetermined"]
 
 def _mp_fn(index):
     main()
