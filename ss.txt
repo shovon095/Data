@@ -1,56 +1,60 @@
-2025-04-13 16:00:44 | INFO | __main__ | T_eval_loss = 13.5565
-2025-04-13 16:00:44 | INFO | __main__ | T_eval_Disposition_precision = 0.0006
-2025-04-13 16:00:44 | INFO | __main__ | T_eval_Disposition_recall = 0.0882
-2025-04-13 16:00:44 | INFO | __main__ | T_eval_Disposition_f1 = 0.0013
-2025-04-13 16:00:44 | INFO | __main__ | T_eval_NoDisposition_precision = 0.0661
-2025-04-13 16:00:44 | INFO | __main__ | T_eval_NoDisposition_recall = 0.0233
-2025-04-13 16:00:44 | INFO | __main__ | T_eval_NoDisposition_f1 = 0.0344
-2025-04-13 16:00:44 | INFO | __main__ | T_eval_Undetermined_precision = 0.3115
-2025-04-13 16:00:44 | INFO | __main__ | T_eval_Undetermined_recall = 0.2235
-2025-04-13 16:00:44 | INFO | __main__ | T_eval_Undetermined_f1 = 0.2603
-2025-04-13 16:00:44 | INFO | __main__ | T_eval_overall_precision = 0.1261
-2025-04-13 16:00:44 | INFO | __main__ | T_eval_overall_recall = 0.1117
-2025-04-13 16:00:44 | INFO | __main__ | T_eval_overall_f1 = 0.0987
-2025-04-13 16:00:44 | INFO | __main__ | T_eval_runtime = 33.6225
-2025-04-13 16:00:44 | INFO | __main__ | T_eval_samples_per_second = 90.0590
-2025-04-13 16:00:44 | INFO | __main__ | T_eval_steps_per_second = 2.8250
-2025-04-13 16:00:44 | INFO | __main__ | *** Predicting on test set ***
+def align_predictions(
+    predictions: np.ndarray, 
+    label_ids: np.ndarray, 
+    valid_ids_array: np.ndarray, 
+    id2label: Dict[int, str]
+) -> Tuple[List[List[str]], List[List[str]]]:
+    preds = predictions.argmax(-1)
+    preds_list, labels_list = [], []
+    for p_row, l_row, v_row in zip(preds, label_ids, valid_ids_array):
+        sent_pred, sent_gold = [], []
+        for p, l, v in zip(p_row, l_row, v_row):
+            # Only consider first subword tokens (valid_id == 1)
+            if v == 1:  
+                if l != IGNORE_INDEX:
+                    sent_pred.append(id2label[int(p)])
+                    sent_gold.append(id2label[int(l)])
+        preds_list.append(sent_pred)
+        labels_list.append(sent_gold)
+    return preds_list, labels_list
 
 
+def build_compute_metrics(id2label: Dict[int, str]):
+    def compute_metrics(p: EvalPrediction) -> Dict[str, float]:
+        # We need to get valid_ids somehow
+        # Option 1: Pass as additional data in EvalPrediction
+        if hasattr(p, 'inputs') and 'valid_ids' in p.inputs:
+            valid_ids_array = p.inputs['valid_ids'].numpy()
+        else:
+            # Option 2: Create a dummy array of all 1s (simplified fallback)
+            valid_ids_array = np.ones_like(p.label_ids)
+        
+        preds_list, gold_list = align_predictions(
+            p.predictions, p.label_ids, valid_ids_array, id2label
+        )
+        
+        # Rest of the metrics calculation
+        report = classification_report(
+            gold_list, preds_list, output_dict=True, zero_division=0
+        )
+        metrics: Dict[str, float] = {}
+        # per‑label
+        for lbl, stats in report.items():
+            if isinstance(stats, dict) and lbl not in {
+                "accuracy",
+                "macro avg",
+                "weighted avg",
+                "micro avg",
+            }:
+                metrics[f"{lbl}_precision"] = stats["precision"]
+                metrics[f"{lbl}_recall"] = stats["recall"]
+                metrics[f"{lbl}_f1"] = stats["f1-score"]
+        # macro average
+        if "macro avg" in report:
+            metrics["overall_precision"] = report["macro avg"]["precision"]
+            metrics["overall_recall"] = report["macro avg"]["recall"]
+            metrics["overall_f1"] = report["macro avg"]["f1-score"]
+        return metrics
 
-*********************** Medication Extraction ************************
-                      ------- strict -------    ------ lenient -------
-                      Prec.   Rec.    F(b=1)    Prec.   Rec.    F(b=1)
-                Drug  0.9226  0.9320  0.9272    0.9579  0.9677  0.9628
-
-
-************************ Event Classification ************************
-                      ------- strict -------    ------ lenient -------
-                      Prec.   Rec.    F(b=1)    Prec.   Rec.    F(b=1)
-         Disposition  0.7063  0.6372  0.6700    0.7273  0.6562  0.6899
-       Nodisposition  0.8622  0.8869  0.8743    0.9025  0.9284  0.9152
-        Undetermined  0.4924  0.5328  0.5118    0.4924  0.5328  0.5118
-                      ------------------------------------------------
-     Overall (micro)  0.8098  0.8176  0.8136    0.8440  0.8521  0.8480
-     Overall (macro)  0.6870  0.6856  0.6854    0.7074  0.7058  0.7056
-
-04/13/2025 15:39:47 - INFO - __main__ -
-***** Per-Label Report *****
-04/13/2025 15:39:47 - INFO - __main__ -   Label: Disposition | Precision=0.7028, Recall=0.6301, F1=0.6645
-04/13/2025 15:39:47 - INFO - __main__ -   Label: NoDisposition | Precision=0.8677, Recall=0.8971, F1=0.8822
-04/13/2025 15:39:47 - INFO - __main__ -   Label: Undetermined | Precision=0.4887, Recall=0.5372, F1=0.5118
-04/13/2025 15:39:47 - INFO - __main__ -   Label: micro avg | Precision=0.8134, Recall=0.8244, F1=0.8188
-04/13/2025 15:39:47 - INFO - __main__ -   Label: macro avg | Precision=0.6864, Recall=0.6881, F1=0.6861
-04/13/2025 15:39:47 - INFO - __main__ -   Label: weighted avg | Precision=0.8121, Recall=0.8244, F1=0.8176
-100%|█████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████| 168/168 [01:13<00:00,  2.28it/s]
-04/13/2025 15:39:47 - INFO - __main__ -   ***** Test results *****
-04/13/2025 15:39:47 - INFO - __main__ -     test_loss = 0.05114644020795822
-04/13/2025 15:39:47 - INFO - __main__ -     test_precision = 0.8133704735376045
-04/13/2025 15:39:47 - INFO - __main__ -     test_recall = 0.8243929983060417
-04/13/2025 15:39:47 - INFO - __main__ -     test_f1 = 0.8188446438586652
-04/13/2025 15:39:47 - INFO - __main__ -     test_runtime = 79.6554
-04/13/2025 15:39:47 - INFO - __main__ -     test_samples_per_second = 67.466
-04/13/2025 15:39:47 - INFO - __main__ -     test_steps_per_second = 2.109
-04/13/2025 15:40:40 - INFO - __main__ -   Reading test data from ./test.txt
-04/13/2025 15:40:41 - INFO - __main__ -   Wrote predictions to out/test_predictions.tsv
+    return compute_metrics
 
