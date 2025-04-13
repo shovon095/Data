@@ -11,3 +11,18 @@ Traceback (most recent call last):
     if hasattr(p, 'inputs') and 'valid_ids' in p.inputs:
 TypeError: argument of type 'NoneType' is not iterable
 
+
+Traceback (most recent call last):
+  File "all_div_new.py", line 796, in <module>
+    main()
+  File "all_div_new.py", line 757, in main
+    stud_metrics = trainer.evaluate()
+  File "/home/shouvon/miniconda3/envs/bert/lib/python3.8/site-packages/transformers/trainer.py", line 3975, in evaluate
+    output = eval_loop(
+  File "/home/shouvon/miniconda3/envs/bert/lib/python3.8/site-packages/transformers/trainer.py", line 4264, in evaluation_loop
+    metrics = self.compute_metrics(
+  File "all_div_new.py", line 617, in compute_metrics
+    preds_list, gold_list = align_predictions( p.predictions, p.label_ids, valid_ids_array, id2label)
+  File "all_div_new.py", line 597, in align_predictions
+    preds = predictions.argmax(-1)
+AttributeError: 'tuple' object has no attribute 'argmax'
