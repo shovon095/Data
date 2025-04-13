@@ -1,60 +1,13 @@
-def align_predictions(
-    predictions: np.ndarray, 
-    label_ids: np.ndarray, 
-    valid_ids_array: np.ndarray, 
-    id2label: Dict[int, str]
-) -> Tuple[List[List[str]], List[List[str]]]:
-    preds = predictions.argmax(-1)
-    preds_list, labels_list = [], []
-    for p_row, l_row, v_row in zip(preds, label_ids, valid_ids_array):
-        sent_pred, sent_gold = [], []
-        for p, l, v in zip(p_row, l_row, v_row):
-            # Only consider first subword tokens (valid_id == 1)
-            if v == 1:  
-                if l != IGNORE_INDEX:
-                    sent_pred.append(id2label[int(p)])
-                    sent_gold.append(id2label[int(l)])
-        preds_list.append(sent_pred)
-        labels_list.append(sent_gold)
-    return preds_list, labels_list
-
-
-def build_compute_metrics(id2label: Dict[int, str]):
-    def compute_metrics(p: EvalPrediction) -> Dict[str, float]:
-        # We need to get valid_ids somehow
-        # Option 1: Pass as additional data in EvalPrediction
-        if hasattr(p, 'inputs') and 'valid_ids' in p.inputs:
-            valid_ids_array = p.inputs['valid_ids'].numpy()
-        else:
-            # Option 2: Create a dummy array of all 1s (simplified fallback)
-            valid_ids_array = np.ones_like(p.label_ids)
-        
-        preds_list, gold_list = align_predictions(
-            p.predictions, p.label_ids, valid_ids_array, id2label
-        )
-        
-        # Rest of the metrics calculation
-        report = classification_report(
-            gold_list, preds_list, output_dict=True, zero_division=0
-        )
-        metrics: Dict[str, float] = {}
-        # per‑label
-        for lbl, stats in report.items():
-            if isinstance(stats, dict) and lbl not in {
-                "accuracy",
-                "macro avg",
-                "weighted avg",
-                "micro avg",
-            }:
-                metrics[f"{lbl}_precision"] = stats["precision"]
-                metrics[f"{lbl}_recall"] = stats["recall"]
-                metrics[f"{lbl}_f1"] = stats["f1-score"]
-        # macro average
-        if "macro avg" in report:
-            metrics["overall_precision"] = report["macro avg"]["precision"]
-            metrics["overall_recall"] = report["macro avg"]["recall"]
-            metrics["overall_f1"] = report["macro avg"]["f1-score"]
-        return metrics
-
-    return compute_metrics
+Traceback (most recent call last):
+  File "all_div_new.py", line 796, in <module>
+    main()
+  File "all_div_new.py", line 757, in main
+    stud_metrics = trainer.evaluate()
+  File "/home/shouvon/miniconda3/envs/bert/lib/python3.8/site-packages/transformers/trainer.py", line 3975, in evaluate
+    output = eval_loop(
+  File "/home/shouvon/miniconda3/envs/bert/lib/python3.8/site-packages/transformers/trainer.py", line 4264, in evaluation_loop
+    metrics = self.compute_metrics(
+  File "all_div_new.py", line 612, in compute_metrics
+    if hasattr(p, 'inputs') and 'valid_ids' in p.inputs:
+TypeError: argument of type 'NoneType' is not iterable
 
