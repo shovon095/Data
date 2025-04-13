@@ -34,3 +34,23 @@
      Overall (micro)  0.8098  0.8176  0.8136    0.8440  0.8521  0.8480
      Overall (macro)  0.6870  0.6856  0.6854    0.7074  0.7058  0.7056
 
+04/13/2025 15:39:47 - INFO - __main__ -
+***** Per-Label Report *****
+04/13/2025 15:39:47 - INFO - __main__ -   Label: Disposition | Precision=0.7028, Recall=0.6301, F1=0.6645
+04/13/2025 15:39:47 - INFO - __main__ -   Label: NoDisposition | Precision=0.8677, Recall=0.8971, F1=0.8822
+04/13/2025 15:39:47 - INFO - __main__ -   Label: Undetermined | Precision=0.4887, Recall=0.5372, F1=0.5118
+04/13/2025 15:39:47 - INFO - __main__ -   Label: micro avg | Precision=0.8134, Recall=0.8244, F1=0.8188
+04/13/2025 15:39:47 - INFO - __main__ -   Label: macro avg | Precision=0.6864, Recall=0.6881, F1=0.6861
+04/13/2025 15:39:47 - INFO - __main__ -   Label: weighted avg | Precision=0.8121, Recall=0.8244, F1=0.8176
+100%|█████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████| 168/168 [01:13<00:00,  2.28it/s]
+04/13/2025 15:39:47 - INFO - __main__ -   ***** Test results *****
+04/13/2025 15:39:47 - INFO - __main__ -     test_loss = 0.05114644020795822
+04/13/2025 15:39:47 - INFO - __main__ -     test_precision = 0.8133704735376045
+04/13/2025 15:39:47 - INFO - __main__ -     test_recall = 0.8243929983060417
+04/13/2025 15:39:47 - INFO - __main__ -     test_f1 = 0.8188446438586652
+04/13/2025 15:39:47 - INFO - __main__ -     test_runtime = 79.6554
+04/13/2025 15:39:47 - INFO - __main__ -     test_samples_per_second = 67.466
+04/13/2025 15:39:47 - INFO - __main__ -     test_steps_per_second = 2.109
+04/13/2025 15:40:40 - INFO - __main__ -   Reading test data from ./test.txt
+04/13/2025 15:40:41 - INFO - __main__ -   Wrote predictions to out/test_predictions.tsv
+
