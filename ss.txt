@@ -1,28 +1,96 @@
-Traceback (most recent call last):
-  File "all_div_new.py", line 796, in <module>
-    main()
-  File "all_div_new.py", line 757, in main
-    stud_metrics = trainer.evaluate()
-  File "/home/shouvon/miniconda3/envs/bert/lib/python3.8/site-packages/transformers/trainer.py", line 3975, in evaluate
-    output = eval_loop(
-  File "/home/shouvon/miniconda3/envs/bert/lib/python3.8/site-packages/transformers/trainer.py", line 4264, in evaluation_loop
-    metrics = self.compute_metrics(
-  File "all_div_new.py", line 612, in compute_metrics
-    if hasattr(p, 'inputs') and 'valid_ids' in p.inputs:
-TypeError: argument of type 'NoneType' is not iterable
-
-
-Traceback (most recent call last):
-  File "all_div_new.py", line 796, in <module>
-    main()
-  File "all_div_new.py", line 757, in main
-    stud_metrics = trainer.evaluate()
-  File "/home/shouvon/miniconda3/envs/bert/lib/python3.8/site-packages/transformers/trainer.py", line 3975, in evaluate
-    output = eval_loop(
-  File "/home/shouvon/miniconda3/envs/bert/lib/python3.8/site-packages/transformers/trainer.py", line 4264, in evaluation_loop
-    metrics = self.compute_metrics(
-  File "all_div_new.py", line 617, in compute_metrics
-    preds_list, gold_list = align_predictions( p.predictions, p.label_ids, valid_ids_array, id2label)
-  File "all_div_new.py", line 597, in align_predictions
-    preds = predictions.argmax(-1)
-AttributeError: 'tuple' object has no attribute 'argmax'
+{'train_runtime': 49.4007, 'train_samples_per_second': 373.193, 'train_steps_per_second': 5.83, 'train_loss': 67.51860215928819, 'epoch': 1.0}
+100%|████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████| 288/288 [00:49<00:00,  5.83it/s]
+2025-04-13 21:07:49 | INFO | __main__ | *** Evaluating student ***
+100%|██████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████| 95/95 [00:03<00:00, 25.10it/s]
+2025-04-13 21:07:53 | INFO | __main__ | eval_loss = 32.1514
+2025-04-13 21:07:53 | INFO | __main__ | eval_Disposition_precision = 0.0000
+2025-04-13 21:07:53 | INFO | __main__ | eval_Disposition_recall = 0.0000
+2025-04-13 21:07:53 | INFO | __main__ | eval_Disposition_f1 = 0.0000
+2025-04-13 21:07:53 | INFO | __main__ | eval_NoDisposition_precision = 0.0000
+2025-04-13 21:07:53 | INFO | __main__ | eval_NoDisposition_recall = 0.0000
+2025-04-13 21:07:53 | INFO | __main__ | eval_NoDisposition_f1 = 0.0000
+2025-04-13 21:07:53 | INFO | __main__ | eval_Undetermined_precision = 0.0000
+2025-04-13 21:07:53 | INFO | __main__ | eval_Undetermined_recall = 0.0000
+2025-04-13 21:07:53 | INFO | __main__ | eval_Undetermined_f1 = 0.0000
+2025-04-13 21:07:53 | INFO | __main__ | eval_overall_precision = 0.0000
+2025-04-13 21:07:53 | INFO | __main__ | eval_overall_recall = 0.0000
+2025-04-13 21:07:53 | INFO | __main__ | eval_overall_f1 = 0.0000
+2025-04-13 21:07:53 | INFO | __main__ | eval_runtime = 3.8168
+2025-04-13 21:07:53 | INFO | __main__ | eval_samples_per_second = 793.3370
+2025-04-13 21:07:53 | INFO | __main__ | eval_steps_per_second = 24.8900
+2025-04-13 21:07:53 | INFO | __main__ | epoch = 0.9991
+2025-04-13 21:07:53 | WARNING | accelerate.utils.other | Detected kernel version 4.15.0, which is below the recommended minimum of 5.5.0; this can cause the process to hang. It is recommended to upgrade the kernel to the minimum version or higher.
+2025-04-13 21:07:53 | INFO | __main__ | *** Evaluating teacher ***
+100%|██████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████| 95/95 [00:32<00:00,  2.97it/s]
+2025-04-13 21:08:26 | INFO | __main__ | T_eval_loss = 0.0714
+2025-04-13 21:08:26 | INFO | __main__ | T_eval_model_preparation_time = 0.0035
+2025-04-13 21:08:26 | INFO | __main__ | T_eval_Disposition_precision = 0.8036
+2025-04-13 21:08:26 | INFO | __main__ | T_eval_Disposition_recall = 0.6618
+2025-04-13 21:08:26 | INFO | __main__ | T_eval_Disposition_f1 = 0.7258
+2025-04-13 21:08:26 | INFO | __main__ | T_eval_NoDisposition_precision = 0.8263
+2025-04-13 21:08:26 | INFO | __main__ | T_eval_NoDisposition_recall = 0.8865
+2025-04-13 21:08:26 | INFO | __main__ | T_eval_NoDisposition_f1 = 0.8553
+2025-04-13 21:08:26 | INFO | __main__ | T_eval_Undetermined_precision = 0.5536
+2025-04-13 21:08:26 | INFO | __main__ | T_eval_Undetermined_recall = 0.3647
+2025-04-13 21:08:26 | INFO | __main__ | T_eval_Undetermined_f1 = 0.4397
+2025-04-13 21:08:26 | INFO | __main__ | T_eval_overall_precision = 0.7278
+2025-04-13 21:08:26 | INFO | __main__ | T_eval_overall_recall = 0.6376
+2025-04-13 21:08:26 | INFO | __main__ | T_eval_overall_f1 = 0.6736
+2025-04-13 21:08:26 | INFO | __main__ | T_eval_runtime = 32.0754
+2025-04-13 21:08:26 | INFO | __main__ | T_eval_samples_per_second = 94.4030
+2025-04-13 21:08:26 | INFO | __main__ | T_eval_steps_per_second = 2.9620
+2025-04-13 21:08:26 | INFO | __main__ | *** Predicting on test set ***
+100%|████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████| 166/166 [00:05<00:00, 28.93it/s]
+2025-04-13 21:08:32 | INFO | __main__ | Reading test data from ./test.tsv
+2025-04-13 21:08:32 | INFO | __main__ | Wrote predictions to ./output_student_kl/test_predictions.tsv
+(bert) shouvon@dxs4-DGX-Station:~/Calibration-of-BERT-for-NER$
+(bert) shouvon@dxs4-DGX-Station:~/Calibration-of-BERT-for-NER$ python all_div_new.py   --teacher_model_name_or_path ./out_base   --data_dir ./   --labels ./labels.txt   --output_dir ./output_student_ssjs   --distillation_method ssjs   --temperature 4.0   --alpha_ce 0.7   --beta_mse 0.05   --lambda_ssjs 1.0   --max_seq_length 128   --num_train_epochs 1  --do_eval --do_predict  --overwrite_output_dir --per_device_train_batch_size 2 --gradient_accumulation_steps 1  --fp16=True --overwrite_cache true
+/home/shouvon/miniconda3/envs/bert/lib/python3.8/site-packages/torch/nn/modules/transformer.py:307: UserWarning: enable_nested_tensor is True, but self.use_nested_tensor is False because encoder_layer.self_attn.batch_first was not True(use batch_first for better inference performance)
+  warnings.warn(f"enable_nested_tensor is True, but self.use_nested_tensor is False because {why_not_sparsity_fast_path}")
+2025-04-13 21:10:39 | INFO | __main__ | Reading and converting data for devel split
+2025-04-13 21:10:39 | INFO | __main__ | Reading devel data from ./devel.tsv
+2025-04-13 21:10:41 | INFO | __main__ | Reading and converting data for test split
+2025-04-13 21:10:41 | INFO | __main__ | Reading test data from ./test.tsv
+2025-04-13 21:10:46 | WARNING | accelerate.utils.other | Detected kernel version 4.15.0, which is below the recommended minimum of 5.5.0; this can cause the process to hang. It is recommended to upgrade the kernel to the minimum version or higher.
+2025-04-13 21:10:47 | INFO | __main__ | *** Evaluating student ***
+/home/shouvon/miniconda3/envs/bert/lib/python3.8/site-packages/torch/nn/parallel/_functions.py:68: UserWarning: Was asked to gather along dimension 0, but all input tensors were scalars; will instead unsqueeze and return a vector.
+  warnings.warn('Was asked to gather along dimension 0, but all '
+100%|██████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████| 95/95 [00:10<00:00,  9.29it/s]
+2025-04-13 21:11:03 | INFO | __main__ | eval_loss = 1.7297
+2025-04-13 21:11:03 | INFO | __main__ | eval_Disposition_precision = 0.0040
+2025-04-13 21:11:03 | INFO | __main__ | eval_Disposition_recall = 0.1029
+2025-04-13 21:11:03 | INFO | __main__ | eval_Disposition_f1 = 0.0077
+2025-04-13 21:11:03 | INFO | __main__ | eval_NoDisposition_precision = 0.0309
+2025-04-13 21:11:03 | INFO | __main__ | eval_NoDisposition_recall = 0.4803
+2025-04-13 21:11:03 | INFO | __main__ | eval_NoDisposition_f1 = 0.0581
+2025-04-13 21:11:03 | INFO | __main__ | eval_Undetermined_precision = 0.0014
+2025-04-13 21:11:03 | INFO | __main__ | eval_Undetermined_recall = 0.1176
+2025-04-13 21:11:03 | INFO | __main__ | eval_Undetermined_f1 = 0.0027
+2025-04-13 21:11:03 | INFO | __main__ | eval_overall_precision = 0.0121
+2025-04-13 21:11:03 | INFO | __main__ | eval_overall_recall = 0.2336
+2025-04-13 21:11:03 | INFO | __main__ | eval_overall_f1 = 0.0228
+2025-04-13 21:11:03 | INFO | __main__ | eval_runtime = 16.2968
+2025-04-13 21:11:03 | INFO | __main__ | eval_samples_per_second = 185.8040
+2025-04-13 21:11:03 | INFO | __main__ | eval_steps_per_second = 5.8290
+2025-04-13 21:11:03 | WARNING | accelerate.utils.other | Detected kernel version 4.15.0, which is below the recommended minimum of 5.5.0; this can cause the process to hang. It is recommended to upgrade the kernel to the minimum version or higher.
+2025-04-13 21:11:03 | INFO | __main__ | *** Evaluating teacher ***
+100%|██████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████| 95/95 [00:32<00:00,  2.90it/s]
+2025-04-13 21:11:37 | INFO | __main__ | T_eval_loss = 13.5565
+2025-04-13 21:11:37 | INFO | __main__ | T_eval_Disposition_precision = 0.0006
+2025-04-13 21:11:37 | INFO | __main__ | T_eval_Disposition_recall = 0.0882
+2025-04-13 21:11:37 | INFO | __main__ | T_eval_Disposition_f1 = 0.0013
+2025-04-13 21:11:37 | INFO | __main__ | T_eval_NoDisposition_precision = 0.0661
+2025-04-13 21:11:37 | INFO | __main__ | T_eval_NoDisposition_recall = 0.0233
+2025-04-13 21:11:37 | INFO | __main__ | T_eval_NoDisposition_f1 = 0.0344
+2025-04-13 21:11:37 | INFO | __main__ | T_eval_Undetermined_precision = 0.3115
+2025-04-13 21:11:37 | INFO | __main__ | T_eval_Undetermined_recall = 0.2235
+2025-04-13 21:11:37 | INFO | __main__ | T_eval_Undetermined_f1 = 0.2603
+2025-04-13 21:11:37 | INFO | __main__ | T_eval_overall_precision = 0.1261
+2025-04-13 21:11:37 | INFO | __main__ | T_eval_overall_recall = 0.1117
+2025-04-13 21:11:37 | INFO | __main__ | T_eval_overall_f1 = 0.0987
+2025-04-13 21:11:37 | INFO | __main__ | T_eval_runtime = 32.8936
+2025-04-13 21:11:37 | INFO | __main__ | T_eval_samples_per_second = 92.0540
+2025-04-13 21:11:37 | INFO | __main__ | T_eval_steps_per_second = 2.8880
+2025-04-13 21:11:37 | INFO | __main__ | *** Predicting on test set ***
+100%|████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████| 166/166 [00:17<00:00,  9.58it/s]
+2025-04-13 21:11:54 | INFO | __main__ | Reading test data from ./test.tsv
