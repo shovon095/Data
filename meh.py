@@ -1,29 +1,21 @@
- python ./analyze_clusters.py   --input   ./5xFAD_scvi_mapped.h5ad   --output  ./5xFAD_scvi_clustered.h5ad
-/home/shouvon/bioinform/./analyze_clusters.py:10: FutureWarning: In the future, the default backend for leiden will be igraph instead of leidenalg.
-
- To achieve the future defaults please pass: flavor="igraph" and n_iterations=2.  directed must also be False to work with igraph's implementation.
-  sc.tl.umap(ad); sc.tl.leiden(ad, resolution=0.5)
-WARNING: saving figure to file figures/umap_fad_clusters.png
-WARNING: saving figure to file figures/rank_genes_groups_leiden_fad_markers.png
 Traceback (most recent call last):
-  File "/home/shouvon/bioinform/./analyze_clusters.py", line 23, in <module>
-    args=p.parse_args(); main(args)
-                         ^^^^^^^^^^
-  File "/home/shouvon/bioinform/./analyze_clusters.py", line 14, in main
-    pd.DataFrame(sc.get.rank_genes_groups_df(ad, group=None)).to_csv(
-  File "/home/shouvon/miniconda3/lib/python3.11/site-packages/pandas/util/_decorators.py", line 333, in wrapper
-    return func(*args, **kwargs)
-           ^^^^^^^^^^^^^^^^^^^^^
-  File "/home/shouvon/miniconda3/lib/python3.11/site-packages/pandas/core/generic.py", line 3967, in to_csv
-    return DataFrameRenderer(formatter).to_csv(
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/shouvon/miniconda3/lib/python3.11/site-packages/pandas/io/formats/format.py", line 1014, in to_csv
-    csv_formatter.save()
-  File "/home/shouvon/miniconda3/lib/python3.11/site-packages/pandas/io/formats/csvs.py", line 251, in save
-    with get_handle(
-         ^^^^^^^^^^^
-  File "/home/shouvon/miniconda3/lib/python3.11/site-packages/pandas/io/common.py", line 749, in get_handle
-    check_parent_directory(str(handle))
-  File "/home/shouvon/miniconda3/lib/python3.11/site-packages/pandas/io/common.py", line 616, in check_parent_directory
-    raise OSError(rf"Cannot save file into a non-existent directory: '{parent}'")
-OSError: Cannot save file into a non-existent directory: 'results'
+  File "/home/shouvon/bioinform/heat.py", line 9, in <module>
+    sc.pl.rank_genes_groups_heatmap(ad, groupby = "cluster", n_genes= 5, show_gene_labels = True,     # gene names on the y-axis
+  File "/home/shouvon/miniconda3/lib/python3.11/site-packages/legacy_api_wrap/__init__.py", line 82, in fn_compatible
+    return fn(*args_all, **kw)
+           ^^^^^^^^^^^^^^^^^^^
+  File "/home/shouvon/miniconda3/lib/python3.11/site-packages/scanpy/plotting/_tools/__init__.py", line 744, in rank_genes_groups_heatmap
+    return _rank_genes_groups_plot(
+           ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/shouvon/miniconda3/lib/python3.11/site-packages/scanpy/plotting/_tools/__init__.py", line 653, in _rank_genes_groups_plot
+    return heatmap(
+           ^^^^^^^^
+  File "/home/shouvon/miniconda3/lib/python3.11/site-packages/legacy_api_wrap/__init__.py", line 82, in fn_compatible
+    return fn(*args_all, **kw)
+           ^^^^^^^^^^^^^^^^^^^
+  File "/home/shouvon/miniconda3/lib/python3.11/site-packages/scanpy/plotting/_anndata.py", line 1189, in heatmap
+    categories, obs_tidy = _prepare_dataframe(
+                           ^^^^^^^^^^^^^^^^^^^
+  File "/home/shouvon/miniconda3/lib/python3.11/site-packages/scanpy/plotting/_anndata.py", line 2078, in _prepare_dataframe
+    raise ValueError(
+ValueError: groupby has to be a valid observation. Given cluster, is not in observations: ['sample', 'n_genes', 'n_genes_by_counts', 'log1p_n_genes_by_counts', 'total_counts', 'log1p_total_counts', 'pct_counts_in_top_50_genes', 'pct_counts_in_top_100_genes', 'pct_counts_in_top_200_genes', 'pct_counts_in_top_500_genes', 'total_counts_mt', 'log1p_total_counts_mt', 'pct_counts_mt', 'protocol', '_scvi_batch', '_scvi_labels', 'leiden']
