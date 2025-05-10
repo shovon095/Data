@@ -19,3 +19,4 @@ Traceback (most recent call last):
   File "/home/shouvon/miniconda3/lib/python3.11/site-packages/scvi/model/base/_base_model.py", line 490, in _check_if_trained
     raise RuntimeError(message)
 RuntimeError: Trying to query inferred values from an untrained model. Please train the model first.
+python train.py   --input     ./tms_concat.h5ad   --output    ./scvi_tms   --annotated ./TMS_scVI_integrated.h5ad
