@@ -1,10 +1,23 @@
-Welcome to NVIDIA DGX Station Version 4.0.7 (GNU/Linux 4.15.0-213-generic x86_64)
-Last login: Wed May 14 23:39:16 2025 from 129.207.35.122
-shouvon@dgx1-DGX-Station:~$ which nvcc
-/usr/local/cuda/bin/nvcc
-shouvon@dgx1-DGX-Station:~$ ls -l /usr/local/cuda
-lrwxrwxrwx 1 root root 22 May 14 22:57 /usr/local/cuda -> /etc/alternatives/cuda
-shouvon@dgx1-DGX-Station:~$ sudo ln -sfn /usr/local/cuda-11.7 /usr/local/cuda
-[sudo] password for shouvon:
+sudo tee /etc/profile.d/cuda.sh >/dev/null <<'EOF'
+> # NVIDIA CUDA 11.7 environment
+> export CUDA_HOME=/usr/local/cuda
+> export PATH=\${CUDA_HOME}/bin:\${PATH}
+> export LD_LIBRARY_PATH=\${CUDA_HOME}/lib64:\${LD_LIBRARY_PATH}
+> EOF
 shouvon@dgx1-DGX-Station:~$ source /etc/profile.d/cuda.sh
--bash: /etc/profile.d/cuda.sh: No such file or directory
+shouvon@dgx1-DGX-Station:~$ which nvcc
+Command 'which' is available in the following places
+ * /bin/which
+ * /usr/bin/which
+The command could not be located because '/usr/bin:/bin' is not included in the PATH environment variable.
+which: command not found
+shouvon@dgx1-DGX-Station:~$ nvcc --version
+
+Command 'nvcc' not found, but can be installed with:
+
+sudo apt install nvidia-cuda-toolkit
+
+shouvon@dgx1-DGX-Station:~$ nvidia-smi
+Command 'nvidia-smi' is available in '/usr/bin/nvidia-smi'
+The command could not be located because '/usr/bin' is not included in the PATH environment variable.
+nvidia-smi: command not found
