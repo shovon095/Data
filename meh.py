@@ -1,48 +1,39 @@
-apt-key list
-/etc/apt/trusted.gpg
---------------------
-pub   rsa4096 2022-04-14 [SC]
-      EB69 3B30 35CD 5710 E231  E123 A4B4 6996 3BF8 63CC
-uid           [ unknown] cudatools <cudatools@nvidia.com>
+ sudo apt update
+Hit:2 https://download.docker.com/linux/ubuntu bionic InRelease
+Hit:3 http://ppa.launchpad.net/graphics-drivers/ppa/ubuntu bionic InRelease
+Hit:4 http://security.ubuntu.com/ubuntu bionic-security InRelease
+Hit:5 http://archive.ubuntu.com/ubuntu bionic InRelease
+Hit:6 http://archive.ubuntu.com/ubuntu bionic-updates InRelease
+Get:7 https://developer.download.nvidia.com/compute/cuda/repos/ubuntu1804/x86_64  InRelease [1,581 B]
+Get:1 https://international.download.nvidia.com/dgxstation/repos/bionic bionic InRelease [7,114 B]
+Err:1 https://international.download.nvidia.com/dgxstation/repos/bionic bionic InRelease
+  The following signatures couldn't be verified because the public key is not available: NO_PUBKEY 208CE844D9F220AD
+Get:8 https://developer.download.nvidia.com/compute/cuda/repos/ubuntu1804/x86_64  Packages [1,373 kB]
+Fetched 1,382 kB in 2s (862 kB/s)
+Reading package lists... Done
+Building dependency tree
+Reading state information... Done
+10 packages can be upgraded. Run 'apt list --upgradable' to see them.
+W: An error occurred during the signature verification. The repository is not updated and the previous index files will be used. GPG error: https://international.download.nvidia.com/dgxstation/repos/bionic bionic InRelease: The following signatures couldn't be verified because the public key is not available: NO_PUBKEY 208CE844D9F220AD
+W: Failed to fetch http://international.download.nvidia.com/dgxstation/repos/bionic/dists/bionic/InRelease  The following signatures couldn't be verified because the public key is not available: NO_PUBKEY 208CE844D9F220AD
+W: Some index files failed to download. They have been ignored, or old ones used instead.
+shouvon@dgx1-DGX-Station:~$ sudo apt install -y nvidia-driver-515
+Reading package lists... Done
+Building dependency tree
+Reading state information... Done
+Some packages could not be installed. This may mean that you have
+requested an impossible situation or if you are using the unstable
+distribution that some required packages have not yet been created
+or been moved out of Incoming.
+The following information may help to resolve the situation:
 
-/etc/apt/trusted.gpg.d/dgx-key.gpg
-----------------------------------
-pub   rsa4096 2016-06-07 [SC]
-      7835 264B 12C3 DA96 5D0E  1078 ECDB 3674 629C 85F2
-uid           [ unknown] dgx-cosmos-support <dgx-cosmos-support@nvidia.com>
-sub   rsa4096 2016-06-07 [E]
-
-/etc/apt/trusted.gpg.d/docker-key.gpg
--------------------------------------
-pub   rsa4096 2017-02-22 [SCEA]
-      9DC8 5822 9FC7 DD38 854A  E2D8 8D81 803C 0EBF CD88
-uid           [ unknown] Docker Release (CE deb) <docker@docker.com>
-sub   rsa4096 2017-02-22 [S]
-
-/etc/apt/trusted.gpg.d/graphics-drivers_ubuntu_ppa.gpg
-------------------------------------------------------
-pub   rsa4096 2015-08-12 [SC]
-      2388 FF3B E10A 76F6 38F8  0723 FCAE 110B 1118 213C
-uid           [ unknown] Launchpad PPA for Graphics Drivers Team
-
-/etc/apt/trusted.gpg.d/ubuntu-keyring-2012-archive.gpg
-------------------------------------------------------
-pub   rsa4096 2012-05-11 [SC]
-      790B C727 7767 219C 42C8  6F93 3B4F E6AC C0B2 1F32
-uid           [ unknown] Ubuntu Archive Automatic Signing Key (2012) <ftpmaster@ubuntu.com>
-
-/etc/apt/trusted.gpg.d/ubuntu-keyring-2012-cdimage.gpg
-------------------------------------------------------
-pub   rsa4096 2012-05-11 [SC]
-      8439 38DF 228D 22F7 B374  2BC0 D94A A3F0 EFE2 1092
-uid           [ unknown] Ubuntu CD Image Automatic Signing Key (2012) <cdimage@ubuntu.com>
-
-/etc/apt/trusted.gpg.d/ubuntu-keyring-2018-archive.gpg
-------------------------------------------------------
-pub   rsa4096 2018-09-17 [SC]
-      F6EC B376 2474 EDA9 D21B  7022 8719 20D1 991B C93C
-uid           [ unknown] Ubuntu Archive Automatic Signing Key (2018) <ftpmaster@ubuntu.com>
-
-shouvon@dgx1-DGX-Station:~$
+The following packages have unmet dependencies:
+ nvidia-driver-515 : Depends: libnvidia-gl-515 (= 515.105.01-0ubuntu1) but it is not going to be installed
+                     Depends: libnvidia-encode-515 (= 515.105.01-0ubuntu1) but it is not going to be installed
+                     Depends: nvidia-utils-515 (= 515.105.01-0ubuntu1) but it is not going to be installed
+                     Depends: xserver-xorg-video-nvidia-515 (= 515.105.01-0ubuntu1) but it is not going to be installed
+                     Depends: libnvidia-cfg1-515 (= 515.105.01-0ubuntu1) but it is not going to be installed
+                     Depends: libnvidia-fbc1-515 (= 515.105.01-0ubuntu1) but it is not going to be installed
+E: Unable to correct problems, you have held broken packages.
 
 
