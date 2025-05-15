@@ -1,11 +1,15 @@
-sudo apt install -y nvidia-driver-515
+sudo apt install -y cuda-drivers
 Reading package lists... Done
 Building dependency tree
 Reading state information... Done
-Some packages could not be installed. This may mean that you have
-requested an impossible situation or if you are using the unstable
-distribution that some required packages have not yet been created
-or been moved out of Incoming.
-The following information may help to resolve the situation:
+cuda-drivers is already the newest version (530.30.02-1).
+You might want to run 'apt --fix-broken install' to correct these.
+The following packages have unmet dependencies:
+ nvidia-dkms-535 : Depends: nvidia-kernel-common-535 (<= 535.146.02-1) but it is not going to be installed
+                   Depends: nvidia-kernel-common-535 (>= 535.146.02) but it is not going to be installed
+ nvidia-driver-535 : Depends: nvidia-kernel-common-535 (<= 535.146.02-1) but it is not going to be installed
+                     Depends: nvidia-kernel-common-535 (>= 535.146.02) but it is not going to be installed
+ nvidia-kernel-common-530 : Depends: nvidia-kernel-common-535 but it is not going to be installed
+E: Unmet dependencies. Try 'apt --fix-broken install' with no packages (or specify a solution).
 
 
