@@ -1,12 +1,29 @@
-python no_adap.py   --input     5xFAD_matched_with_protocol.h5ad   --model_dir scvi_tms   --output    results/fad_no_adapter.h5ad
-/home/shouvon/miniconda3/lib/python3.11/site-packages/docrep/decorators.py:43: SyntaxWarning: 'param_categorical_covariate_keys' is not a valid key!
-  doc = func(self, args[0].__doc__, *args[1:], **kwargs)
-/home/shouvon/miniconda3/lib/python3.11/site-packages/docrep/decorators.py:43: SyntaxWarning: 'param_continuous_covariate_keys' is not a valid key!
-  doc = func(self, args[0].__doc__, *args[1:], **kwargs)
-🧬 Dataset distribution:
-dataset
-WT    88296
-Name: count, dtype: int64
-INFO     File scvi_tms/model.pt already downloaded
-/home/shouvon/miniconda3/lib/python3.11/site-packages/scvi/data/fields/_base_field.py:63: UserWarning: adata.X does not contain unnormalized count data. Are you sure this is what you want?
-  self.validate_field(adata)
+Wed May 14 21:44:09 2025
++-----------------------------------------------------------------------------+
+| NVIDIA-SMI 410.129      Driver Version: 410.129      CUDA Version: 10.0     |
+|-------------------------------+----------------------+----------------------+
+| GPU  Name        Persistence-M| Bus-Id        Disp.A | Volatile Uncorr. ECC |
+| Fan  Temp  Perf  Pwr:Usage/Cap|         Memory-Usage | GPU-Util  Compute M. |
+|===============================+======================+======================|
+|   0  Tesla V100-DGXS...  On   | 00000000:07:00.0  On |                    0 |
+| N/A   33C    P0    37W / 300W |    344MiB / 32475MiB |      0%      Default |
++-------------------------------+----------------------+----------------------+
+|   1  Tesla V100-DGXS...  On   | 00000000:08:00.0 Off |                    0 |
+| N/A   32C    P0    38W / 300W |      1MiB / 32478MiB |      0%      Default |
++-------------------------------+----------------------+----------------------+
+|   2  Tesla V100-DGXS...  On   | 00000000:0E:00.0 Off |                    0 |
+| N/A   32C    P0    39W / 300W |      0MiB / 32478MiB |      0%      Default |
++-------------------------------+----------------------+----------------------+
+|   3  Tesla V100-DGXS...  On   | 00000000:0F:00.0 Off |                    0 |
+| N/A   32C    P0    37W / 300W |      0MiB / 32478MiB |      0%      Default |
++-------------------------------+----------------------+----------------------+
+
++-----------------------------------------------------------------------------+
+| Processes:                                                       GPU Memory |
+|  GPU       PID   Type   Process name                             Usage      |
+|=============================================================================|
+|    0      2083      G   /usr/lib/xorg/Xorg                            18MiB |
+|    0      2142      G   /usr/bin/gnome-shell                         106MiB |
+|    0      3023      G   /usr/lib/xorg/Xorg                           106MiB |
+|    0      3163      G   /usr/bin/gnome-shell                         111MiB |
++-----------------------------------------------------------------------------+
