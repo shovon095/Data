@@ -3,7 +3,6 @@
 Traceback (most recent call last):
   File "/home/shouvon/DAMO-ConvAI/bird/llm/llama_interpret.py", line 221, in <module>
     main(args)
-  File "/home/shouvon/DAMO-ConvAI/bird/llm/llama_interpret.py", line 142, in main
-    tbls = re.findall(r"CREATE TABLE (\\w+)", schema, re.I)
-NameError: name 're' is not defined
-
+  File "/home/shouvon/DAMO-ConvAI/bird/llm/llama_interpret.py", line 149, in main
+    vec = layer_states[input_len + pos]
+IndexError: index 39 is out of bounds for axis 0 with size 1
