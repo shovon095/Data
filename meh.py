@@ -1,22 +1,24 @@
+  {
+        "question_id": 0,
+        "db_id": "california_schools",
+        "question": "What is the highest eligible free rate for K-12 students in the schools in Alameda County?",
+        "evidence": "Eligible free rate for K-12 = `Free Meal Count (K-12)` / `Enrollment (K-12)`",
+        "SQL": "SELECT `Free Meal Count (K-12)` / `Enrollment (K-12)` FROM frpm WHERE `County Name` = 'Alameda' ORDER BY (CAST(`Free Meal Count (K-12)` AS REAL) / `Enrollment (K-12)`) DESC LIMIT 1",
+        "difficulty": "simple"
+    },
 
- python3 llama_interpret.py     --model_path ./checkpoints/llama_bird_ft/                --data_file   ./data/dev/dev.json                     --db_root    ./data/dev/dev_databases                 --max_new_tokens 128
-You set `add_prefix_space`. The tokenizer needs to be converted from the slow tokenizers
-/home/shouvon/anaconda3/envs/gpt/lib/python3.9/site-packages/huggingface_hub/file_download.py:1150: FutureWarning: `resume_download` is deprecated and will be removed in version 1.0.0. Downloads always resume when possible. If you want to force a new download, use `force_download=True`.
-  warnings.warn(
-Loading checkpoint shards: 100%|██████████████████████████████████████████████████████████████████████████████████████████████████████████████████| 2/2 [00:01<00:00,  1.29it/s]
-/home/shouvon/anaconda3/envs/gpt/lib/python3.9/site-packages/huggingface_hub/file_download.py:1150: FutureWarning: `resume_download` is deprecated and will be removed in version 1.0.0. Downloads always resume when possible. If you want to force a new download, use `force_download=True`.
-  warnings.warn(
-Traceback (most recent call last):
-  File "/home/shouvon/DAMO-ConvAI/bird/llm/llama_interpret.py", line 215, in <module>
-    main(args)
-  File "/home/shouvon/DAMO-ConvAI/bird/llm/llama_interpret.py", line 69, in main
-    examples = [json.loads(l) for l in open(args.data_file)]
-  File "/home/shouvon/DAMO-ConvAI/bird/llm/llama_interpret.py", line 69, in <listcomp>
-    examples = [json.loads(l) for l in open(args.data_file)]
-  File "/home/shouvon/anaconda3/envs/gpt/lib/python3.9/json/__init__.py", line 346, in loads
-    return _default_decoder.decode(s)
-  File "/home/shouvon/anaconda3/envs/gpt/lib/python3.9/json/decoder.py", line 337, in decode
-    obj, end = self.raw_decode(s, idx=_w(s, 0).end())
-  File "/home/shouvon/anaconda3/envs/gpt/lib/python3.9/json/decoder.py", line 355, in raw_decode
-    raise JSONDecodeError("Expecting value", s, err.value) from None
-json.decoder.JSONDecodeError: Expecting value: line 2 column 1 (char 2)
+
+    {
+        "question_id": 90,
+        "db_id": "financial",
+        "question": "How many accounts who have region in Prague are eligible for loans?",
+        "evidence": "A3 contains the data of region",
+        "SQL": "SELECT COUNT(T1.account_id) FROM account AS T1 INNER JOIN loan AS T2 ON T1.account_id = T2.account_id INNER JOIN district AS T3 ON T1.district_id = T3.district_id WHERE T3.A3 = 'Prague'",
+        "difficulty": "simple"
+    },
+
+ {                                                                                                                                                               "question_id": 118,                                                                                                                                         "db_id": "financial",                                                                                                                                       "question": "For loan amount less than USD100,000, what is the percentage of accounts that is still running with no issue.",                                "evidence": "Status = 'C' stands for running contract, ok so far; Percentage of accounts by condition = [(total(amount) & condition) / (total amount)] * 100%.",
+        "SQL": "SELECT CAST(SUM(status = 'C') AS REAL) * 100 / COUNT(amount) FROM loan WHERE amount < 100000",
+        "difficulty": "moderate"
+    },
+
